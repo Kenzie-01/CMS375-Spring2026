@@ -1,5 +1,4 @@
 <?php
-
 include __DIR__ . '/db_connect.php';
 
 $role_filter = "";
@@ -14,8 +13,8 @@ if ($role_filter != "") {
 $sql .= " ORDER BY ReviewCount DESC";
 
 $result = mysqli_query($conn, $sql);
+$total = mysqli_num_rows($result);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,49 +23,216 @@ $result = mysqli_query($conn, $sql);
     <title>Users - MTM Studios</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0d0d0d; color: #f0f0f0; }
-        .navbar { background-color: #1a1a2e; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e94560; }
-        .navbar .logo { font-size: 24px; font-weight: bold; color: #e94560; text-decoration: none; }
-        .navbar .nav-links a { color: #f0f0f0; text-decoration: none; margin-left: 25px; font-size: 16px; }
-        .navbar .nav-links a:hover { color: #e94560; }
-        .navbar .nav-links a.active { color: #e94560; border-bottom: 2px solid #e94560; padding-bottom: 3px; }
-        .page-header { text-align: center; padding: 35px 20px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
-        .page-header h1 { font-size: 30px; margin-bottom: 8px; }
-        .page-header p { color: #aaa; font-size: 15px; margin-bottom: 20px; }
-        .filter-bar { display: flex; justify-content: center; gap: 10px; }
-        .filter-bar a { padding: 8px 20px; border-radius: 20px; text-decoration: none; font-size: 14px; border: 1px solid #333; color: #aaa; }
-        .filter-bar a:hover { border-color: #e94560; color: #e94560; }
-        .filter-bar a.active { background-color: #e94560; color: white; border-color: #e94560; }
-        .table-container { max-width: 1000px; margin: 25px auto; padding: 0 30px; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; background-color: #16213e; border-radius: 10px; overflow: hidden; }
-        th { background-color: #1a1a2e; padding: 14px 18px; text-align: left; font-size: 13px; color: #e94560; text-transform: uppercase; letter-spacing: 0.5px; }
-        td { padding: 12px 18px; font-size: 14px; border-bottom: 1px solid #1a1a3e; color: #ccc; }
-        tr:hover { background-color: rgba(233, 69, 96, 0.05); }
-        .role-badge { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: bold; }
-        .role-admin { background-color: rgba(233, 69, 96, 0.2); color: #e94560; }
-        .role-critic { background-color: rgba(96, 163, 233, 0.2); color: #60a3e9; }
-        .role-regular { background-color: rgba(100, 200, 150, 0.2); color: #64c896; }
-        .footer { text-align: center; padding: 20px; color: #555; font-size: 13px; border-top: 1px solid #1a1a2e; margin-top: 30px; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+        }
+
+        .navbar {
+            background-color: #0a0a0a;
+            border-bottom: 2px solid #ffffff;
+            padding: 14px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #5b80a8;
+            text-decoration: none;
+            letter-spacing: 2px;
+        }
+
+        .nav-right { display: flex; align-items: center; }
+
+        .nav-divider {
+            width: 2px;
+            height: 28px;
+            background-color: #ffffff;
+            margin: 0 16px;
+        }
+
+        .nav-icons { display: flex; align-items: center; gap: 16px; }
+
+        .nav-icons a {
+            color: #aaa;
+            text-decoration: none;
+            font-size: 22px;
+            padding: 6px 10px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav-icons a:hover,
+        .nav-icons a.active {
+            color: #fff;
+            border-color: #fff;
+            background-color: #1a1a1a;
+        }
+
+        /* ---- PAGE HEADER ---- */
+        .page-header {
+            padding: 36px 30px 24px;
+            border-bottom: 1px solid #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-header-left {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+        }
+
+        .page-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #ffffff;
+            border-bottom: 2px solid #5b80a8;
+            padding-bottom: 5px;
+        }
+
+        .page-count { font-size: 12px; color: #555; }
+
+        /* ---- FILTER PILLS ---- */
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar a {
+            padding: 5px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            border: 1px solid #2a2a2a;
+            color: #777;
+            transition: all 0.2s;
+        }
+
+        .filter-bar a:hover {
+            border-color: #5b80a8;
+            color: #5b80a8;
+        }
+
+        .filter-bar a.active {
+            background: #5b80a8;
+            color: #fff;
+            border-color: #5b80a8;
+        }
+
+        /* ---- TABLE ---- */
+        .table-container {
+            padding: 28px 30px 60px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead tr {
+            border-bottom: 2px solid #1c1c1c;
+        }
+
+        th {
+            padding: 10px 16px;
+            text-align: left;
+            font-size: 10px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 13px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid #111;
+            color: #ccc;
+        }
+
+        tbody tr {
+            transition: background 0.15s;
+        }
+
+        tbody tr:hover td {
+            background: #0f0f0f;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .role-Admin {
+            background: rgba(91, 128, 168, 0.15);
+            border: 1px solid #5b80a8;
+            color: #5b80a8;
+        }
+
+        .role-Critic {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid #555;
+            color: #aaa;
+        }
+
+        .role-Regular {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #2a2a2a;
+            color: #666;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #333;
+            font-size: 12px;
+            border-top: 1px solid #1a1a1a;
+        }
     </style>
 </head>
 <body>
 
 <nav class="navbar">
-    <a href="index.php" class="logo">MTM Studios</a>
-    <div class="nav-links">
-        <a href="index.php">Browse Movies</a>
-        <a href="reviews.php">Reviews</a>
-        <a href="users.php" class="active">Users</a>
+    <a href="index.php" class="logo">MTM STUDIOS</a>
+    <div class="nav-right">
+        <div class="nav-divider"></div>
+        <div class="nav-icons">
+            <a href="index.php" title="Home">&#8962;</a>
+            <a href="movies.php" title="Movies">&#9654;</a>
+            <a href="reviews.php" title="Reviews">&#9733;</a>
+            <a href="users.php" class="active" title="Users">&#128100;</a>
+        </div>
     </div>
 </nav>
 
 <div class="page-header">
-    <h1>Users</h1>
-    <p><?php echo mysqli_num_rows($result); ?> registered users</p>
+    <div class="page-header-left">
+        <div class="page-title">Users</div>
+        <div class="page-count"><?php echo $total; ?> total</div>
+    </div>
     <div class="filter-bar">
         <a href="users.php" class="<?php if ($role_filter == '') echo 'active'; ?>">All</a>
-        <a href="users.php?role=Admin" class="<?php if ($role_filter == 'Admin') echo 'active'; ?>">Admins</a>
-        <a href="users.php?role=Critic" class="<?php if ($role_filter == 'Critic') echo 'active'; ?>">Critics</a>
+        <a href="users.php?role=Admin" class="<?php if ($role_filter == 'Admin') echo 'active'; ?>">Admin</a>
+        <a href="users.php?role=Critic" class="<?php if ($role_filter == 'Critic') echo 'active'; ?>">Critic</a>
         <a href="users.php?role=Regular" class="<?php if ($role_filter == 'Regular') echo 'active'; ?>">Regular</a>
     </div>
 </div>
@@ -86,12 +252,7 @@ $result = mysqli_query($conn, $sql);
                 <tr>
                     <td><?php echo htmlspecialchars($user['UserID']); ?></td>
                     <td>
-                        <?php
-                        $role_class = 'role-regular';
-                        if ($user['UserType'] == 'Admin') $role_class = 'role-admin';
-                        if ($user['UserType'] == 'Critic') $role_class = 'role-critic';
-                        ?>
-                        <span class="role-badge <?php echo $role_class; ?>">
+                        <span class="role-badge role-<?php echo htmlspecialchars($user['UserType']); ?>">
                             <?php echo htmlspecialchars($user['UserType']); ?>
                         </span>
                     </td>

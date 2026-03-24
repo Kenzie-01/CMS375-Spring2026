@@ -1,29 +1,16 @@
 <?php
-
 include __DIR__ . '/db_connect.php';
 
-// Search function
-$search = "";
-if (isset($_GET['search'])) {
-    $search = mysqli_real_escape_string($conn, $_GET['search']);
-}
+$stats_sql = "SELECT
+    (SELECT COUNT(*) FROM Movies) AS total_movies,
+    (SELECT COUNT(*) FROM Reviews) AS total_reviews,
+    (SELECT COUNT(*) FROM Users) AS total_users,
+    (SELECT AVG(Rating) FROM Movies) AS avg_rating";
+$stats_result = mysqli_query($conn, $stats_sql);
+$stats = mysqli_fetch_assoc($stats_result);
 
-$sql = "SELECT * FROM Movies WHERE 1=1";
-if ($search != "") {
-    $sql .= " AND Title LIKE '%$search%'";
-}
-$sql .= " ORDER BY Rating DESC";
-
-$result = mysqli_query($conn, $sql);
-
-// genre grouping
-$movies_by_genre = [];
-while ($movie = mysqli_fetch_assoc($result)) {
-    $genres     = explode(", ", $movie['Genre']);
-    $firstGenre = trim($genres[0]);
-    $movies_by_genre[$firstGenre][] = $movie;
-}
-
+$top_sql = "SELECT * FROM Movies ORDER BY Rating DESC LIMIT 5";
+$top_result = mysqli_query($conn, $top_sql);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -32,7 +19,6 @@ while ($movie = mysqli_fetch_assoc($result)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MTM Studios</title>
     <style>
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -59,11 +45,7 @@ while ($movie = mysqli_fetch_assoc($result)) {
             letter-spacing: 2px;
         }
 
-        .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 0;
-        }
+        .nav-right { display: flex; align-items: center; }
 
         .nav-divider {
             width: 2px;
@@ -72,11 +54,7 @@ while ($movie = mysqli_fetch_assoc($result)) {
             margin: 0 16px;
         }
 
-        .nav-icons {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
+        .nav-icons { display: flex; align-items: center; gap: 16px; }
 
         .nav-icons a {
             color: #aaa;
@@ -95,138 +73,217 @@ while ($movie = mysqli_fetch_assoc($result)) {
             background-color: #1a1a1a;
         }
 
-        /* ---- GENRE ROW (label + search inline) ---- */
-        .genre-section {
-            padding: 24px 30px 12px;
+        /* ---- HERO ---- */
+        .hero {
+            padding: 80px 30px 60px;
+            text-align: center;
+            border-bottom: 1px solid #1a1a1a;
         }
 
-        .genre-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
+        .hero-eyebrow {
+            font-size: 11px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #5b80a8;
+            margin-bottom: 18px;
         }
 
-        .genre-label {
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 800;
+            letter-spacing: 6px;
+            color: #ffffff;
+            line-height: 1.1;
+            margin-bottom: 18px;
+        }
+
+        .hero h1 span { color: #5b80a8; }
+
+        .hero p {
             font-size: 15px;
-            font-weight: bold;
+            color: #666;
+            max-width: 460px;
+            margin: 0 auto 36px;
+            line-height: 1.7;
+        }
+
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            padding: 11px 28px;
+            background: #5b80a8;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: background 0.2s, transform 0.15s;
+        }
+
+        .btn-primary:hover { background: #4a6a90; transform: translateY(-2px); }
+
+        .btn-outline {
+            padding: 11px 28px;
+            background: transparent;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 2px solid #ffffff;
+            letter-spacing: 0.5px;
+            transition: background 0.2s, transform 0.15s;
+        }
+
+        .btn-outline:hover { background: #1a1a1a; transform: translateY(-2px); }
+
+        /* ---- STATS ---- */
+        .stats-section {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        .stat-block {
+            flex: 1;
+            max-width: 240px;
+            padding: 36px 20px;
+            text-align: center;
+            border-right: 1px solid #1a1a1a;
+        }
+
+        .stat-block:last-child { border-right: none; }
+
+        .stat-number {
+            font-size: 40px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -1px;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .stat-number span { color: #5b80a8; }
+
+        .stat-label {
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* ---- TOP RATED ---- */
+        .section {
+            padding: 40px 30px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
             color: #ffffff;
             border-bottom: 2px solid #5b80a8;
-            display: inline-block;
             padding-bottom: 5px;
         }
 
-        /* ---- SEARCH (only shown on first genre row) ---- */
-        .search-form {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .search-form span {
-            font-size: 16px;
-            color: #aaa;
-        }
-
-        .search-form input {
-            padding: 7px 14px;
-            background: #111;
-            border: 1px solid #ffffff;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 14px;
-            width: 240px;
-        }
-
-        .search-form input:focus { outline: none; border-color: #5b80a8; }
-        .search-form input::placeholder { color: #555; }
-
-        .search-form button {
-            padding: 7px 16px;
-            background: #5b80a8;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .search-form button:hover { background: #4a6a90; }
-
-        .clear-link {
+        .section-link {
+            font-size: 12px;
             color: #5b80a8;
             text-decoration: none;
-            font-size: 13px;
-            white-space: nowrap;
+            letter-spacing: 1px;
         }
 
-        /* ---- MOVIE ROW (horizontal scroll) ---- */
-        .movie-row {
-            display: flex;
-            gap: 16px;
-            overflow-x: auto;
-            padding-bottom: 10px;
-        }
+        .section-link:hover { text-decoration: underline; }
 
-        .movie-row::-webkit-scrollbar { height: 4px; }
-        .movie-row::-webkit-scrollbar-track { background: #111; }
-        .movie-row::-webkit-scrollbar-thumb { background: #5b80a8; border-radius: 4px; }
-
-        /* ---- MOVIE CARD (landscape) ---- */
-        .movie-card {
-            min-width: 240px;
-            max-width: 240px;
-            height: 160px;
-            background-color: #0a0a0a;
-            border: 2px solid #ffffff;
-            border-radius: 14px;
-            padding: 18px 16px;
-            text-decoration: none;
-            color: #ffffff;
+        .top-list {
             display: flex;
             flex-direction: column;
+            gap: 1px;
+        }
+
+        .top-item {
+            display: flex;
+            align-items: center;
             justify-content: space-between;
-            transition: border-color 0.2s, transform 0.2s;
+            padding: 14px 18px;
+            background: #0f0f0f;
+            border: 1px solid #1c1c1c;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #ffffff;
+            transition: border-color 0.2s, background 0.2s;
+            gap: 16px;
+        }
+
+        .top-item:hover {
+            border-color: #5b80a8;
+            background: #111;
+        }
+
+        .top-item-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 0;
+        }
+
+        .top-rank {
+            font-size: 11px;
+            color: #444;
+            font-weight: 700;
+            width: 20px;
+            text-align: right;
             flex-shrink: 0;
         }
 
-        .movie-card:hover {
-            border-color: #5b80a8;
-            transform: translateY(-4px);
-        }
-
-        .card-title {
+        .top-title {
             font-size: 14px;
-            font-weight: bold;
-            line-height: 1.35;
-        }
-
-        .card-bottom {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-        }
-
-        .card-service {
-            font-size: 11px;
-            color: #777;
+            font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .card-score {
-            display: inline-block;
+        .top-genre {
+            font-size: 11px;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .top-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .top-service {
+            font-size: 11px;
+            color: #555;
+        }
+
+        .top-score {
             background: #5b80a8;
             color: #fff;
             padding: 3px 10px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
-            white-space: nowrap;
-            flex-shrink: 0;
         }
 
         /* ---- FOOTER ---- */
@@ -236,9 +293,8 @@ while ($movie = mysqli_fetch_assoc($result)) {
             color: #333;
             font-size: 12px;
             border-top: 1px solid #1a1a1a;
-            margin-top: 20px;
+            margin-top: 10px;
         }
-
     </style>
 </head>
 <body>
@@ -248,52 +304,66 @@ while ($movie = mysqli_fetch_assoc($result)) {
     <div class="nav-right">
         <div class="nav-divider"></div>
         <div class="nav-icons">
-            <a href="index.php" class="active" title="Browse">&#8962;</a>
-            <a href="reviews.php" title="Reviews">&#9654;</a>
-            <a href="users.php" title="Users">&#9733;</a>
+            <a href="index.php" class="active" title="Home">&#8962;</a>
+            <a href="movies.php" title="Movies">&#9654;</a>
+            <a href="reviews.php" title="Reviews">&#9733;</a>
+            <a href="users.php" title="Users">&#128100;</a>
         </div>
     </div>
 </nav>
 
-<?php if (empty($movies_by_genre)): ?>
-    <p style="text-align:center; color:#555; padding:60px;">No movies found.</p>
-<?php endif; ?>
-
-<?php $firstGenre = true; ?>
-<?php foreach ($movies_by_genre as $genre => $movies): ?>
-    <div class="genre-section">
-        <div class="genre-header">
-            <div class="genre-label"><?php echo htmlspecialchars($genre); ?></div>
-
-            <?php if ($firstGenre): ?>
-                <form class="search-form" method="GET" action="index.php">
-                    <span>&#128269;</span>
-                    <input type="text" name="search"
-                           placeholder="Search movies..."
-                           value="<?php echo htmlspecialchars($search); ?>">
-                    <button type="submit">Search</button>
-                    <?php if ($search != ""): ?>
-                        <a href="index.php" class="clear-link">&#10005; Clear</a>
-                    <?php endif; ?>
-                </form>
-                <?php $firstGenre = false; ?>
-            <?php endif; ?>
-        </div>
-
-        <div class="movie-row">
-            <?php foreach ($movies as $movie): ?>
-                <a href="movie.php?id=<?php echo urlencode($movie['MovieID']); ?>"
-                   class="movie-card">
-                    <div class="card-title"><?php echo htmlspecialchars($movie['Title']); ?></div>
-                    <div class="card-bottom">
-                        <div class="card-service"><?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
-                        <span class="card-score"><?php echo $movie['Rating']; ?>/10</span>
-                    </div>
-                </a>
-            <?php endforeach; ?>
-        </div>
+<div class="hero">
+    <div class="hero-eyebrow">Movie Tracking &amp; Management</div>
+    <h1>MTM<br><span>STUDIOS</span></h1>
+    <p>Browse films, read critic and community reviews, and track what's streaming — all in one place.</p>
+    <div class="hero-actions">
+        <a href="movies.php" class="btn-primary">&#9654; &nbsp;Browse Movies</a>
+        <a href="reviews.php" class="btn-outline">&#9733; &nbsp;All Reviews</a>
     </div>
-<?php endforeach; ?>
+</div>
+
+<div class="stats-section">
+    <div class="stat-block">
+        <div class="stat-number"><?php echo $stats['total_movies']; ?></div>
+        <div class="stat-label">Movies</div>
+    </div>
+    <div class="stat-block">
+        <div class="stat-number"><?php echo $stats['total_reviews']; ?></div>
+        <div class="stat-label">Reviews</div>
+    </div>
+    <div class="stat-block">
+        <div class="stat-number"><?php echo $stats['total_users']; ?></div>
+        <div class="stat-label">Users</div>
+    </div>
+    <div class="stat-block">
+        <div class="stat-number"><?php echo number_format($stats['avg_rating'], 1); ?><span>/10</span></div>
+        <div class="stat-label">Avg Rating</div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">Top Rated</div>
+        <a href="movies.php" class="section-link">View All &rsaquo;</a>
+    </div>
+    <div class="top-list">
+        <?php $rank = 1; while ($movie = mysqli_fetch_assoc($top_result)): ?>
+            <a href="movie.php?id=<?php echo urlencode($movie['MovieID']); ?>" class="top-item">
+                <div class="top-item-left">
+                    <div class="top-rank">#<?php echo $rank++; ?></div>
+                    <div>
+                        <div class="top-title"><?php echo htmlspecialchars($movie['Title']); ?></div>
+                        <div class="top-genre"><?php echo htmlspecialchars($movie['Genre']); ?></div>
+                    </div>
+                </div>
+                <div class="top-right">
+                    <div class="top-service"><?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
+                    <span class="top-score"><?php echo $movie['Rating']; ?>/10</span>
+                </div>
+            </a>
+        <?php endwhile; ?>
+    </div>
+</div>
 
 <div class="footer">MTM Studios &copy; 2026 | CMS 375 Database Project</div>
 
