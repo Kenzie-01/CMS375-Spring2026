@@ -313,7 +313,7 @@ $top_result = mysqli_query($conn, $top_sql);
 </nav>
 
 <div class="hero">
-    <div class="hero-eyebrow">Movie Tracking &amp; Management</div>
+    <div class="hero-eyebrow"></div>
     <h1>MTM<br><span>STUDIOS</span></h1>
     <p>Browse films, read critic and community reviews, and track what's streaming — all in one place.</p>
     <div class="hero-actions">
