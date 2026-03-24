@@ -41,7 +41,7 @@ while ($movie = mysqli_fetch_assoc($result)) {
             color: #ffffff;
         }
 
-        // basic navigation
+        /* ---- NAVBAR ---- */
         .navbar {
             background-color: #0a0a0a;
             border-bottom: 2px solid #ffffff;
@@ -95,53 +95,17 @@ while ($movie = mysqli_fetch_assoc($result)) {
             background-color: #1a1a1a;
         }
 
-        /* ---- SEARCH ROW ---- */
-        .search-row {
+        /* ---- GENRE ROW (label + search inline) ---- */
+        .genre-section {
+            padding: 24px 30px 12px;
+        }
+
+        .genre-header {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            padding: 16px 30px 8px;
-            gap: 10px;
+            justify-content: space-between;
+            margin-bottom: 16px;
         }
-
-        .search-row form {
-            display: flex;
-            gap: 8px;
-        }
-
-        .search-row input {
-            padding: 8px 16px;
-            background: #111;
-            border: 1px solid #ffffff;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 14px;
-            width: 260px;
-        }
-
-        .search-row input:focus { outline: none; border-color: #5b80a8; }
-        .search-row input::placeholder { color: #555; }
-
-        .search-row button {
-            padding: 8px 18px;
-            background: #5b80a8;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .search-row button:hover { background: #4a6a90; }
-
-        .clear-link {
-            color: #5b80a8;
-            text-decoration: none;
-            font-size: 13px;
-        }
-
-        // genr efiltering
-        .genre-section { padding: 20px 30px 10px; }
 
         .genre-label {
             font-size: 15px;
@@ -150,10 +114,54 @@ while ($movie = mysqli_fetch_assoc($result)) {
             border-bottom: 2px solid #5b80a8;
             display: inline-block;
             padding-bottom: 5px;
-            margin-bottom: 14px;
         }
 
-        // movie row scrolling
+        /* ---- SEARCH (only shown on first genre row) ---- */
+        .search-form {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-form span {
+            font-size: 16px;
+            color: #aaa;
+        }
+
+        .search-form input {
+            padding: 7px 14px;
+            background: #111;
+            border: 1px solid #ffffff;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            width: 240px;
+        }
+
+        .search-form input:focus { outline: none; border-color: #5b80a8; }
+        .search-form input::placeholder { color: #555; }
+
+        .search-form button {
+            padding: 7px 16px;
+            background: #5b80a8;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .search-form button:hover { background: #4a6a90; }
+
+        .clear-link {
+            color: #5b80a8;
+            text-decoration: none;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        /* ---- MOVIE ROW (horizontal scroll) ---- */
         .movie-row {
             display: flex;
             gap: 16px;
@@ -165,18 +173,22 @@ while ($movie = mysqli_fetch_assoc($result)) {
         .movie-row::-webkit-scrollbar-track { background: #111; }
         .movie-row::-webkit-scrollbar-thumb { background: #5b80a8; border-radius: 4px; }
 
-        // movie icons
+        /* ---- MOVIE CARD (landscape) ---- */
         .movie-card {
-            min-width: 190px;
-            max-width: 190px;
+            min-width: 240px;
+            max-width: 240px;
+            height: 160px;
             background-color: #0a0a0a;
             border: 2px solid #ffffff;
             border-radius: 14px;
-            padding: 16px;
+            padding: 18px 16px;
             text-decoration: none;
             color: #ffffff;
-            display: block;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
             transition: border-color 0.2s, transform 0.2s;
+            flex-shrink: 0;
         }
 
         .movie-card:hover {
@@ -187,14 +199,22 @@ while ($movie = mysqli_fetch_assoc($result)) {
         .card-title {
             font-size: 14px;
             font-weight: bold;
-            margin-bottom: 10px;
             line-height: 1.35;
         }
 
+        .card-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
         .card-service {
-            font-size: 12px;
+            font-size: 11px;
             color: #777;
-            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .card-score {
@@ -205,8 +225,11 @@ while ($movie = mysqli_fetch_assoc($result)) {
             border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
+        /* ---- FOOTER ---- */
         .footer {
             text-align: center;
             padding: 20px;
@@ -220,49 +243,52 @@ while ($movie = mysqli_fetch_assoc($result)) {
 </head>
 <body>
 
-// navigation bar
 <nav class="navbar">
     <a href="index.php" class="logo">MTM STUDIOS</a>
-
     <div class="nav-right">
         <div class="nav-divider"></div>
         <div class="nav-icons">
-            <a href="index.php" class="active" title="Browse">&#8962;</a>  <!-- house -->
-            <a href="reviews.php" title="Reviews">&#9654;</a>               <!-- play -->
-            <a href="users.php" title="Users">&#9733;</a>                   <!-- star -->
+            <a href="index.php" class="active" title="Browse">&#8962;</a>
+            <a href="reviews.php" title="Reviews">&#9654;</a>
+            <a href="users.php" title="Users">&#9733;</a>
         </div>
     </div>
 </nav>
 
-// search  row
-<div class="search-row">
-    &#128269;
-    <form method="GET" action="index.php">
-        <input type="text" name="search"
-               placeholder="Search movies..."
-               value="<?php echo htmlspecialchars($search); ?>">
-        <button type="submit">Search</button>
-    </form>
-    <?php if ($search != ""): ?>
-        <a href="index.php" class="clear-link">&#10005; Clear</a>
-    <?php endif; ?>
-</div>
-
-// rows by genre
 <?php if (empty($movies_by_genre)): ?>
     <p style="text-align:center; color:#555; padding:60px;">No movies found.</p>
 <?php endif; ?>
 
+<?php $firstGenre = true; ?>
 <?php foreach ($movies_by_genre as $genre => $movies): ?>
     <div class="genre-section">
-        <div class="genre-label"><?php echo htmlspecialchars($genre); ?></div>
+        <div class="genre-header">
+            <div class="genre-label"><?php echo htmlspecialchars($genre); ?></div>
+
+            <?php if ($firstGenre): ?>
+                <form class="search-form" method="GET" action="index.php">
+                    <span>&#128269;</span>
+                    <input type="text" name="search"
+                           placeholder="Search movies..."
+                           value="<?php echo htmlspecialchars($search); ?>">
+                    <button type="submit">Search</button>
+                    <?php if ($search != ""): ?>
+                        <a href="index.php" class="clear-link">&#10005; Clear</a>
+                    <?php endif; ?>
+                </form>
+                <?php $firstGenre = false; ?>
+            <?php endif; ?>
+        </div>
+
         <div class="movie-row">
             <?php foreach ($movies as $movie): ?>
                 <a href="movie.php?id=<?php echo urlencode($movie['MovieID']); ?>"
                    class="movie-card">
                     <div class="card-title"><?php echo htmlspecialchars($movie['Title']); ?></div>
-                    <div class="card-service"><?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
-                    <span class="card-score"><?php echo $movie['Rating']; ?>/10</span>
+                    <div class="card-bottom">
+                        <div class="card-service"><?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
+                        <span class="card-score"><?php echo $movie['Rating']; ?>/10</span>
+                    </div>
                 </a>
             <?php endforeach; ?>
         </div>
