@@ -121,8 +121,8 @@ INSERT INTO Movies (MovieID, Title, PosterURL, StreamingServices, Genre, Rating)
 ('tt0086250', 'Scarface', 'Poster URL', 'Amazon Prime Video', 'Crime, Drama', 8.3),
 ('tt0051201', 'Witness for the Prosecution', 'Poster URL', 'Amazon Prime Video', 'Crime, Drama, Mystery', 8.4),
 ('tt0012349', 'The Kid', 'Poster URL', 'The Criterion Channel', 'Comedy, Drama, Family', 8.3),
-('tt0095016', 'Die Hard', 'Poster URL', 'Amazon Prime Video, Hulu', 'Action, Thriller', 8.2)
-('tt0095067', 'Eight Crazy Nights', 'Poster URL', 'Amazon Prime Video, Hulu', 'Comedy', 6.7)
+('tt0095016', 'Die Hard', 'Poster URL', 'Amazon Prime Video, Hulu', 'Action, Thriller', 8.2),
+('tt0095067', 'Eight Crazy Nights', 'Poster URL', 'Amazon Prime Video, Hulu', 'Comedy', 6.7),
 ('tt0118799', 'Life Is Beautiful', 'Poster URL', 'Amazon Prime Video, Pluto TV', 'Comedy, Drama, Romance', 8.6),
 ('tt0407887', 'The Departed', 'Poster URL', 'Max, Netflix', 'Crime, Drama, Thriller', 8.5),
 ('tt0317248', 'City of God', 'Poster URL', 'Amazon Prime Video, Kanopy', 'Crime, Drama', 8.6),
