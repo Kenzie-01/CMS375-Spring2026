@@ -121,7 +121,28 @@ INSERT INTO Movies (MovieID, Title, PosterURL, StreamingServices, Genre, Rating)
 ('tt0086250', 'Scarface', 'Poster URL', 'Amazon Prime Video', 'Crime, Drama', 8.3),
 ('tt0051201', 'Witness for the Prosecution', 'Poster URL', 'Amazon Prime Video', 'Crime, Drama, Mystery', 8.4),
 ('tt0012349', 'The Kid', 'Poster URL', 'The Criterion Channel', 'Comedy, Drama, Family', 8.3),
-('tt0095016', 'Die Hard', 'Poster URL', 'Amazon Prime Video, Hulu', 'Action, Thriller', 8.2);
+('tt0095016', 'Die Hard', 'Poster URL', 'Amazon Prime Video, Hulu', 'Action, Thriller', 8.2)
+('tt0095067', 'Eight Crazy Nights', 'Poster URL', 'Amazon Prime Video, Hulu', 'Comedy', 6.7)
+('tt0118799', 'Life Is Beautiful', 'Poster URL', 'Amazon Prime Video, Pluto TV', 'Comedy, Drama, Romance', 8.6),
+('tt0407887', 'The Departed', 'Poster URL', 'Max, Netflix', 'Crime, Drama, Thriller', 8.5),
+('tt0317248', 'City of God', 'Poster URL', 'Amazon Prime Video, Kanopy', 'Crime, Drama', 8.6),
+('tt2582802', 'Whiplash', 'Poster URL', 'Netflix, Amazon Prime Video', 'Drama, Music', 8.5),
+('tt2119532', 'Hacksaw Ridge', 'Poster URL', 'Amazon Prime Video, Hulu', 'Biography, Drama, War', 8.1),
+('tt0093779', 'The Princess Bride', 'Poster URL', 'Disney+, Amazon Prime Video', 'Adventure, Comedy, Family', 8.0),
+('tt2380307', 'Coco', 'Poster URL', 'Disney+', 'Animation, Adventure, Family', 8.4),
+('tt0816692', 'Interstellar', 'Poster URL', 'Paramount+, Amazon Prime Video', 'Adventure, Drama, Sci-Fi', 8.7),
+('tt1675434', 'The Intouchables', 'Poster URL', 'Netflix, Amazon Prime Video', 'Biography, Comedy, Drama', 8.5),
+('tt0105695', 'Unforgiven', 'Poster URL', 'Max, Amazon Prime Video', 'Drama, Western', 8.2),
+('tt0120601', 'Being John Malkovich', 'Poster URL', 'Amazon Prime Video, Peacock', 'Comedy, Drama, Fantasy', 7.7),
+('tt0095953', 'Rain Man', 'Poster URL', 'Amazon Prime Video, Pluto TV', 'Drama', 8.0),
+('tt8267604', 'Parasite', 'Poster URL', 'Max, Hulu, Amazon Prime Video', 'Comedy, Drama, Thriller', 8.5),
+('tt0073195', 'Jaws', 'Poster URL', 'Peacock, Amazon Prime Video', 'Adventure, Thriller', 8.1),
+('tt0107048', 'Groundhog Day', 'Poster URL', 'Amazon Prime Video, Netflix', 'Comedy, Drama, Fantasy', 8.0),
+('tt0107290', 'Jurassic Park', 'Poster URL', 'Peacock, Amazon Prime Video', 'Action, Adventure, Sci-Fi', 8.2),
+('tt0101414', 'Beauty and the Beast', 'Poster URL', 'Disney+', 'Animation, Family, Fantasy', 8.0),
+('tt0097165', 'Dead Poets Society', 'Poster URL', 'Disney+, Amazon Prime Video', 'Comedy, Drama', 8.1),
+('tt0034583', 'Casablanca', 'Poster URL', 'Max, Amazon Prime Video', 'Drama, Romance, War', 8.5),
+('tt0060196', 'The Good, the Bad and the Ugly', 'Poster URL', 'Amazon Prime Video, Pluto TV', 'Adventure, Western', 8.8);
 
 
 INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text) VALUES
