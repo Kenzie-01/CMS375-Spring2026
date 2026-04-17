@@ -7,7 +7,7 @@ UserID VARCHAR(20) PRIMARY KEY,
     UserType VARCHAR(20),
     FavoriteGenre VARCHAR(50),
     ReviewCount INT,
-    Password VARCHAR(20)
+    Password VARCHAR(255)
 );
 
 
