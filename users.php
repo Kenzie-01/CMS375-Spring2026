@@ -16,7 +16,7 @@ $result = mysqli_query($conn, $sql);
 $total = mysqli_num_rows($result);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"> 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
