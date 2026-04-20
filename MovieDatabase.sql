@@ -171,9 +171,11 @@ INSERT INTO Movies (MovieID, Title, PosterURL, StreamingServices, Genre, Rating,
 ('tt2119532', 'Hacksaw Ridge', 'Poster URL', 'Amazon Prime Video', 'War', 8.1, 'The true story of Desmond Doss, a conscientious objector who refused to carry a weapon but served as a combat medic in World War II and single-handedly saved 75 men at the Battle of Okinawa.', 'Andrew Garfield, Sam Worthington, Luke Bracey'),
 ('tt2380307', 'Coco', 'Poster URL', 'Disney+', 'Family', 8.4, 'A young aspiring musician is transported to the Land of the Dead on Día de Muertos, where he embarks on an extraordinary journey to find his great-great-grandfather and uncover his family''s history.', 'Anthony Gonzalez, Gael García Bernal, Benjamin Bratt'),
 ('tt2582802', 'Whiplash', 'Poster URL', 'Netflix', 'Drama', 8.5, 'An ambitious young jazz drummer at a prestigious music conservatory is pushed to his mental and physical limits by a ruthless, manipulative conductor obsessed with perfection.', 'Miles Teller, J.K. Simmons, Melissa Benoist'),
-('tt8267604', 'Parasite', 'Poster URL', 'Hulu', 'Comedy', 8.5, 'A poor Korean family schemes to become employed by a wealthy household, but their plan takes a dark and shocking turn when an unexpected secret is discovered beneath the mansion.', 'Song Kang-ho, Lee Sun-kyun, Cho Yeo-jeong');
-
-
+('tt8267604', 'Parasite', 'Poster URL', 'Hulu', 'Comedy', 8.5, 'A poor Korean family schemes to become employed by a wealthy household, but their plan takes a dark and shocking turn when an unexpected secret is discovered beneath the mansion.', 'Song Kang-ho, Lee Sun-kyun, Cho Yeo-jeong')
+('tt8267676', 'Poppy Playtime', 'Poster URL', 'Amazon Prime Video', 'Horror', 1.0, 'One man explore an abandoned Playtime Co. toy factory to uncover the mystery of his missing coworkers', 'Nola Klop, Zachary Preciado, Michael Kovach')
+('tt8673952', 'A Minecraft Movie', 'Poster URL', 'Max', 'Comedy', 5.6, 'Four misfits are transported through a portal into the blocky "Overworld". They team up with expert crafter Steve to harness their creativity, fight back against Malgosha and her army of invading piglins, and find a way back home.', 'Jack Black, Jason Momoa, Sebastian Eugene Hansen')
+('tt9046728', 'Cheese: The Movie', 'Poster URL' 'Tubi' 'Comedy', 0.1, 'One fox named Colby travels the worl in search of his true purpose', 'Jack Black, Chris Pratt, Colby Jack');
+    
 INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text) VALUES
 ('rev_001', 'tt0111161', 'user_035', 10, 'A perfect film in every way. The storytelling, acting, and emotional depth are unmatched.'),
 ('rev_002', 'tt0468569', 'user_012', 9, 'Heath Ledger''s performance is legendary. The tension throughout keeps you on edge.'),
@@ -227,4 +229,7 @@ INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text) VALUES
 ('rev_066', 'tt0105695', 'user_023', 8, 'Eastwood directs and stars with quiet authority. A meditation on violence and regret.'),
 ('rev_067', 'tt0101414', 'user_056', 8, 'The animation was groundbreaking and the music is unforgettable. A Disney high point.'),
 ('rev_068', 'tt0027977', 'user_016', 9, 'Chaplin''s physical comedy is genius. A surprisingly relevant film about industrialization.'),
-('rev_069', 'tt2119532', 'user_043', 8, 'An extraordinary true story told with grit and heart. Garfield is quietly brilliant.');
+('rev_069', 'tt2119532', 'user_043', 8, 'An extraordinary true story told with grit and heart. Garfield is quietly brilliant.')
+('rev_070', 'tt8267676', 'user_067', 1.5, 'Michael Kovach''s work as Doey was disapointing to say the least.')
+('rev_071', 'tt9046728', 'user_067', 10, 'Colby Jack''s work in this film was unparalleled.')
+('rev_071', 'tt0095067', 'user_067', 9, 'Adam Sandler is my favorite jewish man.');
