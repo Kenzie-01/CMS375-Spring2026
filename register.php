@@ -109,11 +109,9 @@ $genres = ['Action','Adventure','Animation','Biography','Comedy','Crime','Drama'
         .nav-back:hover { color: #5b80a8; }
 
         .register-container {
-            flex: 1;
+            padding: 50px 20px 60px;
             display: flex;
-            align-items: center;
             justify-content: center;
-            padding: 40px 20px;
         }
         .register-box {
             width: 100%;
