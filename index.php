@@ -152,8 +152,7 @@ endif;
 $stats_sql = "SELECT
     (SELECT COUNT(*) FROM Movies)  AS total_movies,
     (SELECT COUNT(*) FROM Reviews) AS total_reviews,
-    (SELECT COUNT(*) FROM Users)   AS total_users,
-    (SELECT AVG(Rating) FROM Movies) AS avg_rating";
+    (SELECT COUNT(*) FROM Users)   AS total_users";
 $stats_result = mysqli_query($conn, $stats_sql);
 $stats = mysqli_fetch_assoc($stats_result);
 
@@ -274,10 +273,7 @@ $is_guest = ($_SESSION['user_id'] === 'Guest');
         <div class="stat-number"><?php echo $stats['total_users']; ?></div>
         <div class="stat-label">Users</div>
     </div>
-    <div class="stat-block">
-        <div class="stat-number"><?php echo number_format($stats['avg_rating'], 1); ?><span>/10</span></div>
-        <div class="stat-label">Avg Rating</div>
-    </div>
+
 </div>
 
 <div class="section">
