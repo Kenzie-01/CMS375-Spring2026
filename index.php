@@ -190,6 +190,8 @@ $is_guest = ($_SESSION['user_id'] === 'Guest');
         .hero-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
         .btn-primary { padding: 11px 28px; background: #5b80a8; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; transition: background 0.2s, transform 0.15s; }
         .btn-primary:hover { background: #4a6a90; transform: translateY(-2px); }
+        .btn-outline { padding: 11px 28px; background: transparent; color: #fff !important; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; border: 2px solid #ffffff; transition: background 0.2s, transform 0.15s; display: inline-block; }
+        .btn-outline:hover { background: #1a1a1a; transform: translateY(-2px); }
         .btn-rate { background: none; border: none; color: #555; font-size: 13px; cursor: pointer; margin-top: 6px; transition: color 0.2s; text-decoration: underline; text-underline-offset: 3px; }
         .btn-rate:hover { color: #fff; }
 
