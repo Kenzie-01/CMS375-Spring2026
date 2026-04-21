@@ -1,29 +1,87 @@
 <?php
+session_start();
 include __DIR__ . '/db_connect.php';
+
+if (!isset($_SESSION['logged_in'])) {
+    header("Location: index.php");
+    exit();
+}
 
 if (!isset($_GET['id'])) {
     header("Location: movies.php");
     exit();
 }
 
+$is_guest = ($_SESSION['user_id'] === 'Guest');
 $movie_id = mysqli_real_escape_string($conn, $_GET['id']);
 
-$sql = "SELECT * FROM Movies WHERE MovieID = '$movie_id'";
+
+$review_error   = "";
+$review_success = isset($_GET['reviewed']) && $_GET['reviewed'] == '1';
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
+    if ($is_guest) {
+        $review_error = "You must create an account to write reviews.";
+    } else {
+        $score   = intval($_POST['score']);
+        $text    = mysqli_real_escape_string($conn, trim($_POST['review_text']));
+        $user_id = mysqli_real_escape_string($conn, $_SESSION['user_id']);
+
+        if ($score < 1 || $score > 10) {
+            $review_error = "Score must be between 1 and 10.";
+        } elseif (empty($text)) {
+            $review_error = "Review text cannot be empty.";
+        } else {
+            // Check if already reviewed
+            $check = mysqli_query($conn, "SELECT ReviewID FROM Reviews WHERE UserID = '$user_id' AND MovieID = '$movie_id'");
+            if (mysqli_num_rows($check) > 0) {
+                $review_error = "You have already reviewed this movie.";
+            } else {
+                // Generate a unique review ID
+                $max_q   = mysqli_query($conn, "SELECT MAX(CAST(SUBSTRING(ReviewID, 5) AS UNSIGNED)) AS max_id FROM Reviews WHERE ReviewID LIKE 'rev_%'");
+                $max_row = mysqli_fetch_assoc($max_q);
+                $next_id = (int)($max_row['max_id'] ?? 0) + 1;
+                $rev_id  = 'rev_' . str_pad($next_id, 3, '0', STR_PAD_LEFT);
+
+                mysqli_query($conn, "INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text)
+                                     VALUES ('$rev_id', '$movie_id', '$user_id', $score, '$text')");
+                mysqli_query($conn, "UPDATE Users SET ReviewCount = ReviewCount + 1 WHERE UserID = '$user_id'");
+
+                header("Location: movie.php?id=" . urlencode($movie_id) . "&reviewed=1");
+                exit();
+            }
+        }
+    }
+}
+
+$sql    = "SELECT * FROM Movies WHERE MovieID = '$movie_id'";
 $result = mysqli_query($conn, $sql);
 
 if (mysqli_num_rows($result) == 0) {
-    echo "Movie not found.";
-    exit();
+    echo "<p style='color:#fff;padding:40px;'>Movie not found.</p>"; exit();
 }
-
 $movie = mysqli_fetch_assoc($result);
 
-$review_sql = "SELECT Reviews.*, Users.UserID, Users.UserType
-               FROM Reviews
-               JOIN Users ON Reviews.UserID = Users.UserID
-               WHERE Reviews.MovieID = '$movie_id'
-               ORDER BY Reviews.Score DESC";
+
+$user_already_reviewed = false;
+if (!$is_guest) {
+    $uid_esc = mysqli_real_escape_string($conn, $_SESSION['user_id']);
+    $ck      = mysqli_query($conn, "SELECT ReviewID FROM Reviews WHERE UserID = '$uid_esc' AND MovieID = '$movie_id'");
+    $user_already_reviewed = (mysqli_num_rows($ck) > 0);
+}
+
+
+$review_sql    = "SELECT Reviews.*, Users.UserID, Users.UserType
+                  FROM Reviews
+                  JOIN Users ON Reviews.UserID = Users.UserID
+                  WHERE Reviews.MovieID = '$movie_id'
+                  ORDER BY Reviews.Score DESC";
 $review_result = mysqli_query($conn, $review_sql);
+$review_count  = mysqli_num_rows($review_result);
+
+$avg_q   = mysqli_query($conn, "SELECT AVG(Score) AS avg_score FROM Reviews WHERE MovieID = '$movie_id'");
+$avg_row = mysqli_fetch_assoc($avg_q);
+$avg_score = $avg_row['avg_score'] ? number_format($avg_row['avg_score'], 1) : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -33,236 +91,87 @@ $review_result = mysqli_query($conn, $review_sql);
     <title><?php echo htmlspecialchars($movie['Title']); ?> - MTM Studios</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #0a0a0a; color: #ffffff; }
 
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #0a0a0a;
-            color: #ffffff;
-        }
-
-        .navbar {
-            background-color: #0a0a0a;
-            border-bottom: 2px solid #ffffff;
-            padding: 14px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 20px;
-            font-weight: bold;
-            color: #5b80a8;
-            text-decoration: none;
-            letter-spacing: 2px;
-        }
-
+        /* NAV */
+        .navbar { background-color: #0a0a0a; border-bottom: 2px solid #ffffff; padding: 14px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 20px; font-weight: bold; color: #5b80a8; text-decoration: none; letter-spacing: 2px; }
         .nav-right { display: flex; align-items: center; }
-
-        .nav-divider {
-            width: 2px;
-            height: 28px;
-            background-color: #ffffff;
-            margin: 0 16px;
-        }
-
+        .nav-divider { width: 2px; height: 28px; background-color: #ffffff; margin: 0 16px; }
         .nav-icons { display: flex; align-items: center; gap: 16px; }
+        .nav-icons a { color: #aaa; text-decoration: none; font-size: 22px; padding: 6px 10px; border: 1px solid transparent; border-radius: 8px; transition: all 0.2s; }
+        .nav-icons a:hover, .nav-icons a.active { color: #fff; border-color: #fff; background-color: #1a1a1a; }
+        .user-info { display: flex; align-items: center; gap: 10px; margin-left: 16px; font-size: 13px; color: #888; }
+        .user-badge { background: #5b80a8; color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .logout-link { color: #555; text-decoration: none; font-size: 12px; transition: color 0.2s; }
+        .logout-link:hover { color: #ff5050; }
+        .create-acct-link { color: #5b80a8; text-decoration: none; font-size: 12px; border: 1px solid #5b80a8; padding: 4px 10px; border-radius: 6px; transition: all 0.2s; }
+        .create-acct-link:hover { background: #5b80a8; color: #fff; }
 
-        .nav-icons a {
-            color: #aaa;
-            text-decoration: none;
-            font-size: 22px;
-            padding: 6px 10px;
-            border: 1px solid transparent;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
+        /* CONTENT */
+        .page-content { max-width: 860px; margin: 0 auto; padding: 32px 30px 60px; }
 
-        .nav-icons a:hover,
-        .nav-icons a.active {
-            color: #fff;
-            border-color: #fff;
-            background-color: #1a1a1a;
-        }
-
-        /* ---- CONTENT ---- */
-        .page-content {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 32px 30px 60px;
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #5b80a8;
-            text-decoration: none;
-            font-size: 13px;
-            margin-bottom: 24px;
-            transition: color 0.2s;
-        }
-
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: #5b80a8; text-decoration: none; font-size: 13px; margin-bottom: 24px; transition: color 0.2s; }
         .back-link:hover { color: #fff; }
 
-        /* ---- MOVIE HEADER ---- */
-        .movie-header {
-            border: 2px solid #ffffff;
-            border-radius: 14px;
-            padding: 28px;
-            margin-bottom: 30px;
-        }
-
-        .movie-header h1 {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            margin-bottom: 16px;
-            line-height: 1.2;
-        }
-
-        .movie-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .meta-pill {
-            font-size: 12px;
-            background: #111;
-            border: 1px solid #2a2a2a;
-            border-radius: 20px;
-            padding: 4px 14px;
-            color: #aaa;
-        }
-
-        .meta-pill span { color: #ffffff; font-weight: 600; }
-
-        .header-bottom {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 14px;
-        }
-
+        /* MOVIE HEADER */
+        .movie-header { border: 2px solid #ffffff; border-radius: 14px; padding: 28px; margin-bottom: 20px; }
+        .movie-header h1 { font-size: 28px; font-weight: 800; margin-bottom: 12px; line-height: 1.2; }
+        .movie-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+        .meta-pill { font-size: 12px; background: #111; border: 1px solid #2a2a2a; border-radius: 20px; padding: 4px 14px; color: #aaa; }
+        .meta-pill span { color: #fff; font-weight: 600; }
+        .header-bottom { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
         .genre-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .genre-tag { font-size: 12px; border: 1px solid #5b80a8; color: #5b80a8; padding: 3px 12px; border-radius: 20px; }
+        .score-wrap { display: flex; align-items: center; gap: 10px; }
+        .big-score { background: #5b80a8; color: #fff; padding: 6px 20px; border-radius: 24px; font-size: 20px; font-weight: 800; white-space: nowrap; }
+        .user-score { background: #1a1a1a; border: 1px solid #2a2a2a; color: #aaa; padding: 6px 14px; border-radius: 24px; font-size: 14px; white-space: nowrap; }
 
-        .genre-tag {
-            font-size: 12px;
-            border: 1px solid #5b80a8;
-            color: #5b80a8;
-            padding: 3px 12px;
-            border-radius: 20px;
-        }
+        /* MOVIE INFO */
+        .movie-info { border: 1px solid #1c1c1c; border-radius: 14px; padding: 24px; margin-bottom: 20px; background: #0f0f0f; }
+        .info-section { margin-bottom: 18px; }
+        .info-section:last-child { margin-bottom: 0; }
+        .info-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; font-weight: 600; }
+        .info-text { font-size: 14px; color: #bbb; line-height: 1.7; }
+        .actor-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .actor-tag { font-size: 12px; background: #111; border: 1px solid #2a2a2a; color: #aaa; padding: 3px 12px; border-radius: 6px; }
 
-        .big-score {
-            background: #5b80a8;
-            color: #fff;
-            padding: 6px 20px;
-            border-radius: 24px;
-            font-size: 20px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            white-space: nowrap;
-        }
+        /* REVIEW FORM */
+        .review-form-box { border: 1px solid #2a2a2a; border-radius: 14px; padding: 24px; margin-bottom: 20px; background: #0f0f0f; }
+        .review-form-title { font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; border-bottom: 2px solid #5b80a8; padding-bottom: 5px; margin-bottom: 18px; }
+        .score-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+        .score-row label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 2px; white-space: nowrap; }
+        .score-select { padding: 8px 14px; background: #111; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; }
+        .score-select:focus { outline: none; border-color: #5b80a8; }
+        .score-select option { background: #111; }
+        .review-textarea { width: 100%; padding: 12px 16px; background: #111; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; line-height: 1.6; resize: vertical; min-height: 100px; font-family: inherit; margin-bottom: 14px; }
+        .review-textarea:focus { outline: none; border-color: #5b80a8; }
+        .review-textarea::placeholder { color: #444; }
+        .submit-btn { padding: 10px 24px; background: #5b80a8; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.15s; }
+        .submit-btn:hover { background: #4a6a90; transform: translateY(-2px); }
+        .form-error { background: rgba(255,80,80,0.1); border: 1px solid rgba(255,80,80,0.3); color: #ff5050; padding: 10px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+        .form-success { background: rgba(80,200,120,0.1); border: 1px solid rgba(80,200,120,0.3); color: #50c878; padding: 10px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+        .already-reviewed { font-size: 13px; color: #555; padding: 12px 0; }
+        .already-reviewed span { color: #5b80a8; }
+        .guest-prompt { font-size: 13px; color: #555; }
+        .guest-prompt a { color: #5b80a8; text-decoration: none; }
+        .guest-prompt a:hover { text-decoration: underline; }
 
-        /* ---- REVIEWS ---- */
-        .reviews-header {
-            display: flex;
-            align-items: baseline;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .reviews-title {
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            color: #ffffff;
-            border-bottom: 2px solid #5b80a8;
-            padding-bottom: 5px;
-        }
-
-        .reviews-count {
-            font-size: 12px;
-            color: #555;
-        }
-
-        .review-card {
-            border: 1px solid #1c1c1c;
-            border-radius: 12px;
-            padding: 18px 20px;
-            margin-bottom: 10px;
-            background: #0f0f0f;
-            transition: border-color 0.2s;
-        }
-
+        /* REVIEWS LIST */
+        .reviews-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
+        .reviews-title { font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; border-bottom: 2px solid #5b80a8; padding-bottom: 5px; }
+        .reviews-count { font-size: 12px; color: #555; }
+        .review-card { border: 1px solid #1c1c1c; border-radius: 12px; padding: 18px 20px; margin-bottom: 10px; background: #0f0f0f; transition: border-color 0.2s; }
         .review-card:hover { border-color: #2a2a2a; }
+        .review-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .review-user { display: flex; align-items: center; gap: 8px; }
+        .user-id { font-size: 13px; font-weight: 600; color: #ccc; }
+        .user-role { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; background: #1a1a1a; border: 1px solid #2a2a2a; color: #5b80a8; padding: 2px 8px; border-radius: 8px; }
+        .review-score { background: #5b80a8; color: #fff; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .review-text { font-size: 14px; line-height: 1.7; color: #888; }
+        .no-reviews { text-align: center; color: #444; font-size: 14px; padding: 40px; border: 1px dashed #1c1c1c; border-radius: 12px; }
 
-        .review-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .user-id {
-            font-size: 13px;
-            font-weight: 600;
-            color: #ccc;
-        }
-
-        .user-role {
-            font-size: 10px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            color: #5b80a8;
-            padding: 2px 8px;
-            border-radius: 8px;
-        }
-
-        .review-score {
-            background: #5b80a8;
-            color: #fff;
-            padding: 3px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .review-text {
-            font-size: 14px;
-            line-height: 1.7;
-            color: #888;
-        }
-
-        .no-reviews {
-            text-align: center;
-            color: #444;
-            font-size: 14px;
-            padding: 40px;
-            border: 1px dashed #1c1c1c;
-            border-radius: 12px;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: #333;
-            font-size: 12px;
-            border-top: 1px solid #1a1a1a;
-        }
+        .footer { text-align: center; padding: 20px; color: #333; font-size: 12px; border-top: 1px solid #1a1a1a; }
     </style>
 </head>
 <body>
@@ -277,38 +186,113 @@ $review_result = mysqli_query($conn, $review_sql);
             <a href="reviews.php" title="Reviews">&#9733;</a>
             <a href="users.php" title="Users">&#128100;</a>
         </div>
+        <div class="user-info">
+            <span class="user-badge"><?php echo htmlspecialchars($_SESSION['user_type']); ?></span>
+            <?php echo htmlspecialchars($_SESSION['user_id']); ?>
+            <?php if ($is_guest): ?>
+                <a href="register.php" class="create-acct-link">Create Account</a>
+            <?php else: ?>
+                <a href="logout.php" class="logout-link">Logout</a>
+            <?php endif; ?>
+        </div>
     </div>
 </nav>
 
 <div class="page-content">
     <a href="movies.php" class="back-link">&larr; Back to movies</a>
 
+    <!-- MOVIE HEADER -->
     <div class="movie-header">
         <h1><?php echo htmlspecialchars($movie['Title']); ?></h1>
         <div class="movie-meta">
             <div class="meta-pill"><span>ID:</span> <?php echo htmlspecialchars($movie['MovieID']); ?></div>
-            <div class="meta-pill"><span>Streaming on:</span> <?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
+            <?php if ($movie['ReleaseYear']): ?>
+                <div class="meta-pill"><span>Year:</span> <?php echo $movie['ReleaseYear']; ?></div>
+            <?php endif; ?>
+            <div class="meta-pill"><span>Streaming:</span> <?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
         </div>
         <div class="header-bottom">
             <div class="genre-tags">
-                <?php $genres = explode(", ", $movie['Genre']); foreach ($genres as $g): ?>
-                    <span class="genre-tag"><?php echo trim($g); ?></span>
+                <?php foreach (explode(", ", $movie['Genre']) as $g): ?>
+                    <span class="genre-tag"><?php echo htmlspecialchars(trim($g)); ?></span>
                 <?php endforeach; ?>
             </div>
-            <div class="big-score"><?php echo $movie['Rating']; ?>/10</div>
+            <div class="score-wrap">
+                <?php if ($avg_score): ?>
+                    <div class="user-score">&#9733; <?php echo $avg_score; ?> user avg</div>
+                <?php endif; ?>
+                <div class="big-score"><?php echo $movie['Rating']; ?>/10</div>
+            </div>
         </div>
     </div>
 
-    <div class="reviews-header">
-        <div class="reviews-title">Reviews</div>
-        <div class="reviews-count"><?php echo mysqli_num_rows($review_result); ?> total</div>
+    <!-- MOVIE INFO -->
+    <div class="movie-info">
+        <?php if (!empty($movie['Description'])): ?>
+        <div class="info-section">
+            <div class="info-label">Synopsis</div>
+            <div class="info-text"><?php echo htmlspecialchars($movie['Description']); ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($movie['Actors'])): ?>
+        <div class="info-section">
+            <div class="info-label">Cast</div>
+            <div class="actor-list">
+                <?php foreach (explode(", ", $movie['Actors']) as $actor): ?>
+                    <span class="actor-tag"><?php echo htmlspecialchars(trim($actor)); ?></span>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
-    <?php if (mysqli_num_rows($review_result) > 0): ?>
+    <!-- REVIEW FORM -->
+    <div class="review-form-box">
+        <div class="review-form-title">Write a Review</div>
+
+        <?php if ($review_success): ?>
+            <div class="form-success">&#10003; Your review has been submitted!</div>
+        <?php endif; ?>
+
+        <?php if ($is_guest): ?>
+            <p class="guest-prompt">
+                <a href="register.php">Create an account</a> or <a href="index.php">sign in</a> to write a review.
+            </p>
+
+        <?php elseif ($user_already_reviewed): ?>
+            <p class="already-reviewed">You've already reviewed this movie. <span>Thanks for your feedback!</span></p>
+
+        <?php else: ?>
+            <?php if ($review_error): ?>
+                <div class="form-error"><?php echo htmlspecialchars($review_error); ?></div>
+            <?php endif; ?>
+            <form method="POST" action="movie.php?id=<?php echo urlencode($movie_id); ?>">
+                <div class="score-row">
+                    <label>Your Score</label>
+                    <select name="score" class="score-select">
+                        <?php for ($i = 10; $i >= 1; $i--): ?>
+                            <option value="<?php echo $i; ?>"><?php echo $i; ?>/10</option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <textarea name="review_text" class="review-textarea"
+                          placeholder="Share your thoughts about this film..."><?php echo isset($_POST['review_text']) ? htmlspecialchars($_POST['review_text']) : ''; ?></textarea>
+                <button type="submit" name="submit_review" class="submit-btn">Submit Review</button>
+            </form>
+        <?php endif; ?>
+    </div>
+
+    <!-- REVIEWS LIST -->
+    <div class="reviews-header">
+        <div class="reviews-title">Reviews</div>
+        <div class="reviews-count"><?php echo $review_count; ?> total</div>
+    </div>
+
+    <?php if ($review_count > 0): ?>
         <?php while ($review = mysqli_fetch_assoc($review_result)): ?>
             <div class="review-card">
                 <div class="review-top">
-                    <div class="user-info">
+                    <div class="review-user">
                         <div class="user-id"><?php echo htmlspecialchars($review['UserID']); ?></div>
                         <div class="user-role"><?php echo htmlspecialchars($review['UserType']); ?></div>
                     </div>
@@ -318,7 +302,7 @@ $review_result = mysqli_query($conn, $review_sql);
             </div>
         <?php endwhile; ?>
     <?php else: ?>
-        <div class="no-reviews">No reviews yet for this movie.</div>
+        <div class="no-reviews">No reviews yet. Be the first to review this film!</div>
     <?php endif; ?>
 </div>
 
