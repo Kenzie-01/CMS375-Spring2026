@@ -105,14 +105,6 @@ INSERT INTO Users (UserID, UserType, FavoriteGenre, ReviewCount, Password) VALUE
 ('user_068', 'Regular', 'Action', 0, 'sQ9!pP7$kK'),
 ('user_069', 'Admin', 'Sci-Fi', 0, 'eY9!rQ1$iT');
 
-UPDATE Users
-INNER JOIN (
-    SELECT UserID, COUNT(*) AS ReviewCount
-    FROM Reviews
-    GROUP BY UserID
-) AS ReviewCounts ON Users.UserID = ReviewCounts.UserID
-SET Users.ReviewCount = ReviewCounts.ReviewCount;
-
 INSERT INTO Movies (MovieID, Title, PosterURL, StreamingServices, Genre, Rating, Description, Actors) VALUES
 ('tt0012349', 'The Kid', 'Poster URL', 'The Criterion Channel', 'Comedy', 8.3, 'A pompous millionaire finds his carefree existence turned upside down when a resourceful young orphan enters his life and refuses to leave.', 'Charlie Chaplin, Jackie Coogan, Edna Purviance'),
 ('tt0027977', 'Modern Times', 'Poster URL', 'The Criterion Channel', 'Romance', 8.5, 'A factory worker struggles to survive the pressures of industrial life while falling for a homeless young woman, together searching for a better future.', 'Charlie Chaplin, Paulette Goddard, Henry Bergman'),
@@ -174,8 +166,8 @@ INSERT INTO Movies (MovieID, Title, PosterURL, StreamingServices, Genre, Rating,
 ('tt8267604', 'Parasite', 'Poster URL', 'Hulu', 'Comedy', 8.5, 'A poor Korean family schemes to become employed by a wealthy household, but their plan takes a dark and shocking turn when an unexpected secret is discovered beneath the mansion.', 'Song Kang-ho, Lee Sun-kyun, Cho Yeo-jeong'),
 ('tt8267676', 'Poppy Playtime', 'Poster URL', 'Amazon Prime Video', 'Horror', 1.0, 'One man explore an abandoned Playtime Co. toy factory to uncover the mystery of his missing coworkers', 'Nola Klop, Zachary Preciado, Michael Kovach'),
 ('tt8673952', 'A Minecraft Movie', 'Poster URL', 'Max', 'Comedy', 5.6, 'Four misfits are transported through a portal into the blocky "Overworld". They team up with expert crafter Steve to harness their creativity, fight back against Malgosha and her army of invading piglins, and find a way back home.', 'Jack Black, Jason Momoa, Sebastian Eugene Hansen'),
-('tt9046728', 'Cheese: The Movie', 'Poster URL' 'Tubi' 'Comedy', 0.1, 'One fox named Colby travels the worl in search of his true purpose', 'Jack Black, Chris Pratt, Colby Jack');
-    
+('tt9046728', 'Cheese: The Movie', 'Poster URL', 'Tubi', 'Comedy', 0.1, 'One fox named Colby travels the worl in search of his true purpose', 'Jack Black, Chris Pratt, Colby Jack');
+
 INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text) VALUES
 ('rev_001', 'tt0111161', 'user_035', 10, 'A perfect film in every way. The storytelling, acting, and emotional depth are unmatched.'),
 ('rev_002', 'tt0468569', 'user_012', 9, 'Heath Ledger''s performance is legendary. The tension throughout keeps you on edge.'),
@@ -232,4 +224,12 @@ INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text) VALUES
 ('rev_069', 'tt2119532', 'user_043', 8, 'An extraordinary true story told with grit and heart. Garfield is quietly brilliant.'),
 ('rev_070', 'tt8267676', 'user_067', 1, 'Michael Kovach''s work as Doey was disapointing to say the least.'),
 ('rev_071', 'tt9046728', 'user_067', 10, 'Colby Jack''s work in this film was unparalleled.'),
-('rev_071', 'tt0095067', 'user_067', 9, 'Adam Sandler is my favorite jewish man.');
+('rev_072', 'tt0095067', 'user_067', 9, 'Adam Sandler is my favorite jewish man.');
+
+UPDATE Users
+INNER JOIN (
+    SELECT UserID, COUNT(*) AS ReviewCount
+    FROM Reviews
+    GROUP BY UserID
+) AS ReviewCounts ON Users.UserID = ReviewCounts.UserID
+SET Users.ReviewCount = ReviewCounts.ReviewCount;
