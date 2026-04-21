@@ -190,8 +190,46 @@ $is_guest = ($_SESSION['user_id'] === 'Guest');
         .hero-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
         .btn-primary { padding: 11px 28px; background: #5b80a8; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; transition: background 0.2s, transform 0.15s; }
         .btn-primary:hover { background: #4a6a90; transform: translateY(-2px); }
-        .btn-outline { padding: 11px 28px; background: transparent; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; border: 2px solid #ffffff; transition: background 0.2s, transform 0.15s; }
-        .btn-outline:hover { background: #1a1a1a; transform: translateY(-2px); }
+        .btn-rate { background: none; border: none; color: #555; font-size: 13px; cursor: pointer; margin-top: 6px; transition: color 0.2s; text-decoration: underline; text-underline-offset: 3px; }
+        .btn-rate:hover { color: #fff; }
+
+        /* MODAL */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.open { display: flex; }
+        .modal { background: #111; border: 1px solid #2a2a2a; border-radius: 16px; width: 100%; max-width: 500px; padding: 28px; position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal h2 { font-size: 18px; font-weight: 800; letter-spacing: 2px; margin-bottom: 6px; }
+        .modal h2 span { color: #5b80a8; }
+        .modal-sub { font-size: 13px; color: #555; margin-bottom: 22px; }
+        .modal-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: #555; font-size: 22px; cursor: pointer; transition: color 0.2s; line-height: 1; }
+        .modal-close:hover { color: #fff; }
+        .modal-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; display: block; }
+        .modal-search-wrap { display: flex; gap: 8px; margin-bottom: 14px; }
+        .modal-search-wrap input { flex: 1; padding: 10px 14px; background: #0a0a0a; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; }
+        .modal-search-wrap input:focus { outline: none; border-color: #5b80a8; }
+        .modal-search-wrap input::placeholder { color: #444; }
+        .modal-search-wrap button { padding: 10px 16px; background: #5b80a8; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+        .modal-search-wrap button:hover { background: #4a6a90; }
+        .search-results-list { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+        .search-result-item { padding: 10px 14px; background: #0a0a0a; border: 1px solid #1c1c1c; border-radius: 8px; cursor: pointer; transition: border-color 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .search-result-item:hover { border-color: #5b80a8; }
+        .search-result-item.selected { border-color: #5b80a8; background: rgba(91,128,168,0.1); }
+        .result-title { font-size: 13px; font-weight: 600; }
+        .result-meta { font-size: 11px; color: #555; }
+        .modal-divider { height: 1px; background: #1a1a1a; margin: 16px 0; }
+        .review-fields { display: none; }
+        .review-fields.visible { display: block; }
+        .selected-movie-label { font-size: 13px; color: #5b80a8; margin-bottom: 14px; font-weight: 600; }
+        .score-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .score-select { padding: 9px 14px; background: #0a0a0a; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; }
+        .score-select:focus { outline: none; border-color: #5b80a8; }
+        .score-select option { background: #111; }
+        .modal-textarea { width: 100%; padding: 11px 14px; background: #0a0a0a; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; line-height: 1.6; resize: vertical; min-height: 90px; font-family: inherit; margin-bottom: 14px; }
+        .modal-textarea:focus { outline: none; border-color: #5b80a8; }
+        .modal-textarea::placeholder { color: #444; }
+        .modal-submit { width: 100%; padding: 11px; background: #5b80a8; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .modal-submit:hover { background: #4a6a90; }
+        .modal-error { background: rgba(255,80,80,0.1); border: 1px solid rgba(255,80,80,0.3); color: #ff5050; padding: 9px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+        .modal-success { background: rgba(80,200,120,0.1); border: 1px solid rgba(80,200,120,0.3); color: #50c878; padding: 9px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
         .stats-section { display: flex; justify-content: center; border-bottom: 1px solid #1a1a1a; }
         .stat-block { flex: 1; max-width: 240px; padding: 36px 20px; text-align: center; border-right: 1px solid #1a1a1a; }
         .stat-block:last-child { border-right: none; }
@@ -259,6 +297,11 @@ $is_guest = ($_SESSION['user_id'] === 'Guest');
         <a href="movies.php" class="btn-primary">&#9654; &nbsp;Browse Movies</a>
         <a href="reviews.php" class="btn-outline">&#9733; &nbsp;All Reviews</a>
     </div>
+    <?php if (!$is_guest): ?>
+    <div style="margin-top: 16px;">
+        <button class="btn-rate" onclick="document.getElementById('rateModal').classList.add('open')">Watched a movie? Rate it!</button>
+    </div>
+    <?php endif; ?>
 </div>
 
 <div class="stats-section">
@@ -302,6 +345,118 @@ $is_guest = ($_SESSION['user_id'] === 'Guest');
 </div>
 
 <div class="footer">MTM Studios &copy; 2026 | CMS 375 Database Project</div>
+
+<?php if (!$is_guest): ?>
+<!-- RATE IT MODAL -->
+<div class="modal-overlay" id="rateModal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModal()">&#10005;</button>
+        <h2>RATE A <span>MOVIE</span></h2>
+        <div class="modal-sub">Search for the movie you watched and leave your review.</div>
+
+        <div id="modalMsg"></div>
+
+        <label class="modal-label">Search Movie</label>
+        <div class="modal-search-wrap">
+            <input type="text" id="movieSearch" placeholder="e.g. Inception, The Godfather..." onkeydown="if(event.key==='Enter') searchMovies()">
+            <button onclick="searchMovies()">Search</button>
+        </div>
+
+        <div class="search-results-list" id="searchResults"></div>
+
+        <div class="review-fields" id="reviewFields">
+            <div class="modal-divider"></div>
+            <div class="selected-movie-label" id="selectedMovieLabel"></div>
+            <input type="hidden" id="selectedMovieId">
+
+            <label class="modal-label">Your Score</label>
+            <div class="score-row">
+                <select class="score-select" id="modalScore">
+                    <?php for ($i = 10; $i >= 1; $i--): ?>
+                        <option value="<?php echo $i; ?>"><?php echo $i; ?>/10</option>
+                    <?php endfor; ?>
+                </select>
+            </div>
+
+            <label class="modal-label">Your Review</label>
+            <textarea class="modal-textarea" id="modalText" placeholder="Share your thoughts about this film..."></textarea>
+
+            <button class="modal-submit" onclick="submitReview()">Submit Review</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function closeModal() {
+    document.getElementById('rateModal').classList.remove('open');
+    document.getElementById('movieSearch').value = '';
+    document.getElementById('searchResults').innerHTML = '';
+    document.getElementById('reviewFields').classList.remove('visible');
+    document.getElementById('modalText').value = '';
+    document.getElementById('modalMsg').innerHTML = '';
+}
+
+function searchMovies() {
+    const query = document.getElementById('movieSearch').value.trim();
+    if (!query) return;
+    fetch('search_movies.php?q=' + encodeURIComponent(query))
+        .then(r => r.json())
+        .then(movies => {
+            const list = document.getElementById('searchResults');
+            list.innerHTML = '';
+            document.getElementById('reviewFields').classList.remove('visible');
+            if (movies.length === 0) {
+                list.innerHTML = '<div style="color:#555;font-size:13px;padding:10px 0;">No movies found.</div>';
+                return;
+            }
+            movies.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.innerHTML = `<div><div class="result-title">${m.Title}</div><div class="result-meta">${m.ReleaseYear ?? ''} &bull; ${m.Genre}</div></div><div class="result-meta">${m.Rating}/10</div>`;
+                item.onclick = () => selectMovie(m.MovieID, m.Title, item);
+                list.appendChild(item);
+            });
+        });
+}
+
+function selectMovie(id, title, el) {
+    document.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('selectedMovieId').value = id;
+    document.getElementById('selectedMovieLabel').textContent = 'Reviewing: ' + title;
+    document.getElementById('reviewFields').classList.add('visible');
+    document.getElementById('modalMsg').innerHTML = '';
+}
+
+function submitReview() {
+    const movieId = document.getElementById('selectedMovieId').value;
+    const score   = document.getElementById('modalScore').value;
+    const text    = document.getElementById('modalText').value.trim();
+    const msg     = document.getElementById('modalMsg');
+    if (!movieId) { msg.innerHTML = '<div class="modal-error">Please select a movie first.</div>'; return; }
+    if (!text)    { msg.innerHTML = '<div class="modal-error">Please write your review.</div>'; return; }
+    fetch('submit_review.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'movie_id=' + encodeURIComponent(movieId) + '&score=' + score + '&review_text=' + encodeURIComponent(text)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            msg.innerHTML = '<div class="modal-success">&#10003; Review submitted!</div>';
+            document.getElementById('reviewFields').classList.remove('visible');
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('movieSearch').value = '';
+            document.getElementById('modalText').value = '';
+        } else {
+            msg.innerHTML = '<div class="modal-error">' + data.message + '</div>';
+        }
+    });
+}
+
+document.getElementById('rateModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+</script>
+<?php endif; ?>
 </body>
-</html>
-<?php mysqli_close($conn); ?>
