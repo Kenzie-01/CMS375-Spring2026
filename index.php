@@ -236,6 +236,7 @@ $is_guest = ($_SESSION['user_id'] === 'Guest');
             <span class="user-badge"><?php echo htmlspecialchars($_SESSION['user_type']); ?></span>
             <?php echo htmlspecialchars($_SESSION['user_id']); ?>
             <?php if ($is_guest): ?>
+                <a href="login.php" class="logout-link">Sign In</a>
                 <a href="register.php" class="create-acct-link">Create Account</a>
             <?php else: ?>
                 <a href="logout.php" class="logout-link">Logout</a>

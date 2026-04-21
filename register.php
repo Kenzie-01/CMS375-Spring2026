@@ -276,7 +276,7 @@ $genres = ['Action','Adventure','Animation','Biography','Comedy','Crime','Drama'
             <button type="submit" class="register-btn">CREATE ACCOUNT</button>
         </form>
 
-        <a href="index.php" class="login-link">Already have an account? <span>Sign in</span></a>
+        <a href="login.php" class="login-link">Already have an account? <span>Sign in</span></a>
     </div>
 </div>
 
