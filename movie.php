@@ -1,6 +1,7 @@
 <?php
 session_start();
 include __DIR__ . '/db_connect.php';
+include __DIR__ . '/poster_helper.php';
 
 if (!isset($_SESSION['logged_in'])) {
     header("Location: index.php");
@@ -14,7 +15,6 @@ if (!isset($_GET['id'])) {
 
 $is_guest = ($_SESSION['user_id'] === 'Guest');
 $movie_id = mysqli_real_escape_string($conn, $_GET['id']);
-
 
 $review_error   = "";
 $review_success = isset($_GET['reviewed']) && $_GET['reviewed'] == '1';
@@ -32,12 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
         } elseif (empty($text)) {
             $review_error = "Review text cannot be empty.";
         } else {
-            // Check if already reviewed
             $check = mysqli_query($conn, "SELECT ReviewID FROM Reviews WHERE UserID = '$user_id' AND MovieID = '$movie_id'");
             if (mysqli_num_rows($check) > 0) {
                 $review_error = "You have already reviewed this movie.";
             } else {
-                // Generate a unique review ID
                 $max_q   = mysqli_query($conn, "SELECT MAX(CAST(SUBSTRING(ReviewID, 5) AS UNSIGNED)) AS max_id FROM Reviews WHERE ReviewID LIKE 'rev_%'");
                 $max_row = mysqli_fetch_assoc($max_q);
                 $next_id = (int)($max_row['max_id'] ?? 0) + 1;
@@ -62,14 +60,12 @@ if (mysqli_num_rows($result) == 0) {
 }
 $movie = mysqli_fetch_assoc($result);
 
-
 $user_already_reviewed = false;
 if (!$is_guest) {
     $uid_esc = mysqli_real_escape_string($conn, $_SESSION['user_id']);
     $ck      = mysqli_query($conn, "SELECT ReviewID FROM Reviews WHERE UserID = '$uid_esc' AND MovieID = '$movie_id'");
     $user_already_reviewed = (mysqli_num_rows($ck) > 0);
 }
-
 
 $review_sql    = "SELECT Reviews.*, Users.UserID, Users.UserType
                   FROM Reviews
@@ -82,6 +78,9 @@ $review_count  = mysqli_num_rows($review_result);
 $avg_q   = mysqli_query($conn, "SELECT AVG(Score) AS avg_score FROM Reviews WHERE MovieID = '$movie_id'");
 $avg_row = mysqli_fetch_assoc($avg_q);
 $avg_score = $avg_row['avg_score'] ? number_format($avg_row['avg_score'], 1) : null;
+
+// Determine if a valid poster exists so we can adjust layout
+$has_poster = (getMoviePoster($movie) !== null);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -109,14 +108,78 @@ $avg_score = $avg_row['avg_score'] ? number_format($avg_row['avg_score'], 1) : n
         .create-acct-link:hover { background: #5b80a8; color: #fff; }
 
         /* CONTENT */
-        .page-content { max-width: 860px; margin: 0 auto; padding: 32px 30px 60px; }
+        .page-content { max-width: 900px; margin: 0 auto; padding: 32px 30px 60px; }
 
         .back-link { display: inline-flex; align-items: center; gap: 6px; color: #5b80a8; text-decoration: none; font-size: 13px; margin-bottom: 24px; transition: color 0.2s; }
         .back-link:hover { color: #fff; }
 
-        /* MOVIE HEADER */
-        .movie-header { border: 2px solid #ffffff; border-radius: 14px; padding: 28px; margin-bottom: 20px; }
-        .movie-header h1 { font-size: 28px; font-weight: 800; margin-bottom: 12px; line-height: 1.2; }
+        /* ── MOVIE HEADER with poster ── */
+        .movie-header {
+            border: 2px solid #ffffff;
+            border-radius: 14px;
+            padding: 28px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+
+        /* POSTER column */
+        .poster-column {
+            flex-shrink: 0;
+            width: 160px;
+        }
+        .poster-wrap {
+            width: 160px;
+            height: 240px;          /* 2:3 ratio */
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            background: #111;
+            border: 1px solid #2a2a2a;
+        }
+        /* real poster image */
+        .poster-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            display: block;
+        }
+        /* styled fallback block */
+        .poster-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: linear-gradient(145deg, #1a2535 0%, #0d1520 100%);
+            text-align: center;
+            gap: 12px;
+        }
+        .poster-fallback-genre {
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #5b80a8;
+            font-weight: 700;
+        }
+        .poster-fallback-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #ddd;
+            line-height: 1.35;
+        }
+        .poster-fallback-year {
+            font-size: 11px;
+            color: #555;
+        }
+
+        /* DETAILS column (right of poster) */
+        .header-details { flex: 1; min-width: 0; }
+        .movie-header h1 { font-size: 26px; font-weight: 800; margin-bottom: 12px; line-height: 1.2; }
         .movie-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
         .meta-pill { font-size: 12px; background: #111; border: 1px solid #2a2a2a; border-radius: 20px; padding: 4px 14px; color: #aaa; }
         .meta-pill span { color: #fff; font-weight: 600; }
@@ -126,6 +189,12 @@ $avg_score = $avg_row['avg_score'] ? number_format($avg_row['avg_score'], 1) : n
         .score-wrap { display: flex; align-items: center; gap: 10px; }
         .big-score { background: #5b80a8; color: #fff; padding: 6px 20px; border-radius: 24px; font-size: 20px; font-weight: 800; white-space: nowrap; }
         .user-score { background: #1a1a1a; border: 1px solid #2a2a2a; color: #aaa; padding: 6px 14px; border-radius: 24px; font-size: 14px; white-space: nowrap; }
+
+        /* narrow screens: stack poster above details */
+        @media (max-width: 560px) {
+            .movie-header { flex-direction: column; align-items: center; }
+            .poster-column { width: 100%; display: flex; justify-content: center; }
+        }
 
         /* MOVIE INFO */
         .movie-info { border: 1px solid #1c1c1c; border-radius: 14px; padding: 24px; margin-bottom: 20px; background: #0f0f0f; }
@@ -201,30 +270,42 @@ $avg_score = $avg_row['avg_score'] ? number_format($avg_row['avg_score'], 1) : n
 <div class="page-content">
     <a href="movies.php" class="back-link">&larr; Back to movies</a>
 
-    <!-- MOVIE HEADER -->
+    <!-- MOVIE HEADER – poster + details side by side -->
     <div class="movie-header">
-        <h1><?php echo htmlspecialchars($movie['Title']); ?></h1>
-        <div class="movie-meta">
-            <div class="meta-pill"><span>ID:</span> <?php echo htmlspecialchars($movie['MovieID']); ?></div>
-            <?php if ($movie['ReleaseYear']): ?>
-                <div class="meta-pill"><span>Year:</span> <?php echo $movie['ReleaseYear']; ?></div>
-            <?php endif; ?>
-            <div class="meta-pill"><span>Streaming:</span> <?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
-        </div>
-        <div class="header-bottom">
-            <div class="genre-tags">
-                <?php foreach (explode(", ", $movie['Genre']) as $g): ?>
-                    <span class="genre-tag"><?php echo htmlspecialchars(trim($g)); ?></span>
-                <?php endforeach; ?>
+
+        <!-- POSTER -->
+        <div class="poster-column">
+            <div class="poster-wrap">
+                <?php echo renderPosterImg($movie, 'page'); ?>
             </div>
-            <div class="score-wrap">
-                <?php if ($avg_score): ?>
-                    <div class="user-score">&#9733; <?php echo $avg_score; ?> user avg</div>
+        </div>
+
+        <!-- DETAILS -->
+        <div class="header-details">
+            <h1><?php echo htmlspecialchars($movie['Title']); ?></h1>
+            <div class="movie-meta">
+                <div class="meta-pill"><span>ID:</span> <?php echo htmlspecialchars($movie['MovieID']); ?></div>
+                <?php if ($movie['ReleaseYear']): ?>
+                    <div class="meta-pill"><span>Year:</span> <?php echo $movie['ReleaseYear']; ?></div>
                 <?php endif; ?>
-                <div class="big-score"><?php echo $movie['Rating']; ?>/10</div>
+                <div class="meta-pill"><span>Streaming:</span> <?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
+            </div>
+            <div class="header-bottom">
+                <div class="genre-tags">
+                    <?php foreach (explode(", ", $movie['Genre']) as $g): ?>
+                        <span class="genre-tag"><?php echo htmlspecialchars(trim($g)); ?></span>
+                    <?php endforeach; ?>
+                </div>
+                <div class="score-wrap">
+                    <?php if ($avg_score): ?>
+                        <div class="user-score">&#9733; <?php echo $avg_score; ?> user avg</div>
+                    <?php endif; ?>
+                    <div class="big-score"><?php echo $movie['Rating']; ?>/10</div>
+                </div>
             </div>
         </div>
-    </div>
+
+    </div><!-- /.movie-header -->
 
     <!-- MOVIE INFO -->
     <div class="movie-info">

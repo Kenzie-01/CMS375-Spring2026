@@ -1,6 +1,7 @@
 <?php
 session_start();
 include __DIR__ . '/db_connect.php';
+include __DIR__ . '/poster_helper.php';
 
 if (!isset($_SESSION['logged_in'])) {
     header("Location: index.php");
@@ -83,131 +84,117 @@ if (!$is_filtered) {
         .create-acct-link:hover { background: #5b80a8; color: #fff; }
 
         /* FILTER BAR */
-        .filter-bar {
-            padding: 20px 30px;
-            border-bottom: 1px solid #1a1a1a;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-        }
+        .filter-bar { padding: 20px 30px; border-bottom: 1px solid #1a1a1a; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
         .filter-bar form { display: contents; }
-        .search-input-wrap {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-            min-width: 200px;
-            max-width: 340px;
-        }
-        .search-input-wrap input {
-            flex: 1;
-            padding: 8px 14px;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 14px;
-        }
+        .search-input-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; max-width: 340px; }
+        .search-input-wrap input { flex: 1; padding: 8px 14px; background: #111; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; }
         .search-input-wrap input:focus { outline: none; border-color: #5b80a8; }
         .search-input-wrap input::placeholder { color: #555; }
-        .btn-search {
-            padding: 8px 16px;
-            background: #5b80a8;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 13px;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background 0.2s;
-        }
+        .btn-search { padding: 8px 16px; background: #5b80a8; color: #fff; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
         .btn-search:hover { background: #4a6a90; }
-        .filter-select {
-            padding: 8px 12px;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 13px;
-            cursor: pointer;
-        }
+        .filter-select { padding: 8px 12px; background: #111; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer; }
         .filter-select:focus { outline: none; border-color: #5b80a8; }
         .filter-select option { background: #111; }
-        .clear-btn {
-            padding: 8px 14px;
-            background: transparent;
-            color: #ff5050;
-            border: 1px solid #ff5050;
-            border-radius: 8px;
-            font-size: 13px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
+        .clear-btn { padding: 8px 14px; background: transparent; color: #ff5050; border: 1px solid #ff5050; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
         .clear-btn:hover { background: rgba(255,80,80,0.1); }
 
         /* RESULTS INFO */
-        .results-bar {
-            padding: 12px 30px;
-            font-size: 12px;
-            color: #555;
-            border-bottom: 1px solid #111;
-        }
+        .results-bar { padding: 12px 30px; font-size: 12px; color: #555; border-bottom: 1px solid #111; }
         .results-bar span { color: #fff; font-weight: 600; }
 
-        /* GENRE SECTIONS (default view) */
+        /* GENRE SECTIONS */
         .genre-section { padding: 24px 30px 12px; }
         .genre-label { font-size: 15px; font-weight: bold; border-bottom: 2px solid #5b80a8; display: inline-block; padding-bottom: 5px; margin-bottom: 16px; }
-        .movie-row { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 10px; }
+        .movie-row { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 14px; }
         .movie-row::-webkit-scrollbar { height: 4px; }
         .movie-row::-webkit-scrollbar-track { background: #111; }
         .movie-row::-webkit-scrollbar-thumb { background: #5b80a8; border-radius: 4px; }
 
-        /* MOVIE CARDS */
+        /* ── POSTER CARD ── */
         .movie-card {
-            min-width: 240px;
-            max-width: 240px;
-            height: 160px;
-            background-color: #0a0a0a;
-            border: 2px solid #ffffff;
-            border-radius: 14px;
-            padding: 18px 16px;
+            position: relative;
+            min-width: 150px;
+            max-width: 150px;
+            height: 225px;          /* standard 2:3 poster ratio */
+            border-radius: 10px;
+            overflow: hidden;
             text-decoration: none;
-            color: #ffffff;
+            color: #fff;
+            flex-shrink: 0;
+            border: 2px solid transparent;
+            background: #111;
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            display: block;
+        }
+        .movie-card:hover {
+            border-color: #5b80a8;
+            transform: translateY(-6px);
+            box-shadow: 0 14px 36px rgba(91,128,168,0.4);
+        }
+
+        /* poster image fills card */
+        .card-poster-img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            display: block;
+        }
+
+        /* text fallback – shown when PosterURL is missing/invalid */
+        .card-poster-fallback {
+            position: absolute;
+            inset: 0;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            transition: border-color 0.2s, transform 0.2s;
-            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
+            background: linear-gradient(145deg, #1a2535 0%, #0d1520 100%);
+            text-align: center;
+            gap: 10px;
         }
-        .movie-card:hover { border-color: #5b80a8; transform: translateY(-4px); }
-        .card-title { font-size: 14px; font-weight: bold; line-height: 1.35; }
-        .card-year { font-size: 11px; color: #555; margin-top: 4px; }
-        .card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .card-service { font-size: 11px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-score { background: #5b80a8; color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
+        .card-fallback-genre {
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #5b80a8;
+            font-weight: 700;
+        }
+        .card-fallback-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #ddd;
+            line-height: 1.35;
+        }
 
+        /* gradient overlay at bottom – always visible over the poster */
+        .card-overlay {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 30px 10px 10px;
+            background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 55%, transparent 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .card-title { font-size: 11px; font-weight: 700; line-height: 1.3; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
+        .card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+        .card-year { font-size: 10px; color: #aaa; }
+        .card-score { background: #5b80a8; color: #fff; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
+
+        /* GRID (filtered results) */
         .movie-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 16px;
             padding: 24px 30px;
         }
-        .movie-grid .movie-card {
-            min-width: unset;
-            max-width: unset;
-            width: 100%;
-        }
+        .movie-grid .movie-card { min-width: unset; max-width: unset; width: 100%; }
 
-    
-        .empty-state {
-            text-align: center;
-            color: #444;
-            font-size: 14px;
-            padding: 60px 30px;
-        }
+        .empty-state { text-align: center; color: #444; font-size: 14px; padding: 60px 30px; }
         .empty-state p { margin-bottom: 8px; }
         .empty-state .sub { font-size: 12px; color: #333; }
 
@@ -286,7 +273,6 @@ if (!$is_filtered) {
         </select>
 
         <?php if ($is_filtered): ?>
-            <!-- Preserve sort when clearing -->
             <a href="movies.php?sort=<?php echo urlencode($sort); ?>" class="clear-btn">&#10005; Clear Filters</a>
         <?php endif; ?>
     </div>
@@ -308,37 +294,37 @@ if (!$is_filtered) {
     </div>
 
 <?php elseif ($is_filtered): ?>
-    
+
     <div class="movie-grid">
         <?php foreach ($all_movies as $movie): ?>
             <a href="movie.php?id=<?php echo urlencode($movie['MovieID']); ?>" class="movie-card">
-                <div>
+                <?php echo renderPosterImg($movie, 'card'); ?>
+                <div class="card-overlay">
                     <div class="card-title"><?php echo htmlspecialchars($movie['Title']); ?></div>
-                    <div class="card-year"><?php echo $movie['ReleaseYear'] ?? ''; ?> &bull; <?php echo htmlspecialchars($movie['Genre']); ?></div>
-                </div>
-                <div class="card-bottom">
-                    <div class="card-service"><?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
-                    <span class="card-score"><?php echo $movie['Rating']; ?>/10</span>
+                    <div class="card-bottom">
+                        <div class="card-year"><?php echo $movie['ReleaseYear'] ?? ''; ?></div>
+                        <span class="card-score"><?php echo $movie['Rating']; ?>/10</span>
+                    </div>
                 </div>
             </a>
         <?php endforeach; ?>
     </div>
 
 <?php else: ?>
-    <!-- DEFAULT: grouped by genre, horizontal scroll -->
+    <!-- DEFAULT: grouped by genre, horizontal poster scroll -->
     <?php foreach ($movies_by_genre as $genre => $movies): ?>
         <div class="genre-section">
             <div class="genre-label"><?php echo htmlspecialchars($genre); ?></div>
             <div class="movie-row">
                 <?php foreach ($movies as $movie): ?>
                     <a href="movie.php?id=<?php echo urlencode($movie['MovieID']); ?>" class="movie-card">
-                        <div>
+                        <?php echo renderPosterImg($movie, 'card'); ?>
+                        <div class="card-overlay">
                             <div class="card-title"><?php echo htmlspecialchars($movie['Title']); ?></div>
-                            <div class="card-year"><?php echo $movie['ReleaseYear'] ?? ''; ?></div>
-                        </div>
-                        <div class="card-bottom">
-                            <div class="card-service"><?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
-                            <span class="card-score"><?php echo $movie['Rating']; ?>/10</span>
+                            <div class="card-bottom">
+                                <div class="card-year"><?php echo $movie['ReleaseYear'] ?? ''; ?></div>
+                                <span class="card-score"><?php echo $movie['Rating']; ?>/10</span>
+                            </div>
                         </div>
                     </a>
                 <?php endforeach; ?>
