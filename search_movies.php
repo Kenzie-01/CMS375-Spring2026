@@ -7,15 +7,19 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['user_id'] === 'Guest') {
     exit();
 }
 
-$q      = isset($_GET['q']) ? mysqli_real_escape_string($conn, trim($_GET['q'])) : '';
+$q      = isset($_GET['q']) ? trim($_GET['q']) : '';
 $movies = [];
 
 if ($q !== '') {
-    $sql    = "SELECT MovieID, Title, Genre, Rating, ReleaseYear FROM Movies WHERE Title LIKE '%$q%' ORDER BY Rating DESC LIMIT 10";
-    $result = mysqli_query($conn, $sql);
-    while ($row = mysqli_fetch_assoc($result)) {
+    $search_param = "%$q%";
+    $stmt = $conn->prepare("SELECT MovieID, Title, Genre, Rating, ReleaseYear FROM Movies WHERE Title LIKE ? ORDER BY Rating DESC LIMIT 10");
+    $stmt->bind_param("s", $search_param);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
         $movies[] = $row;
     }
+    $stmt->close();
 }
 
 header('Content-Type: application/json');

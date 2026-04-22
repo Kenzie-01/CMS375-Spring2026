@@ -10,15 +10,17 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_id'] != 'Guest') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $user_id  = mysqli_real_escape_string($conn, $_POST['user_id']);
+    $user_id  = $_POST['user_id'];
     $password = $_POST['password'];
 
-    $sql    = "SELECT * FROM Users WHERE UserID = '$user_id'";
-    $result = mysqli_query($conn, $sql);
+    $stmt = $conn->prepare("SELECT * FROM Users WHERE UserID = ?");
+    $stmt->bind_param("s", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    if (mysqli_num_rows($result) == 1) {
-        $user = mysqli_fetch_assoc($result);
-        if (password_verify($password, $user['Password']) || $password === $user['Password']) {
+    if ($result->num_rows == 1) {
+        $user = $result->fetch_assoc();
+        if (password_verify($password, $user['Password'])) {
             $_SESSION['logged_in']  = true;
             $_SESSION['user_id']    = $user['UserID'];
             $_SESSION['user_type']  = $user['UserType'];
@@ -31,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else {
         $error = "User not found.";
     }
+    $stmt->close();
 }
 
 mysqli_close($conn);

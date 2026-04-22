@@ -14,35 +14,49 @@ if (!isset($_GET['id'])) {
 }
 
 $is_guest = ($_SESSION['user_id'] === 'Guest');
-$movie_id = mysqli_real_escape_string($conn, $_GET['id']);
+$movie_id = $_GET['id'];
 
 $review_error   = "";
 $review_success = isset($_GET['reviewed']) && $_GET['reviewed'] == '1';
 
+// Handle review submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
     if ($is_guest) {
         $review_error = "You must create an account to write reviews.";
     } else {
         $score   = intval($_POST['score']);
-        $text    = mysqli_real_escape_string($conn, trim($_POST['review_text']));
-        $user_id = mysqli_real_escape_string($conn, $_SESSION['user_id']);
+        $text    = trim($_POST['review_text']);
+        $user_id = $_SESSION['user_id'];
 
         if ($score < 1 || $score > 10) {
             $review_error = "Score must be between 1 and 10.";
         } elseif (empty($text)) {
             $review_error = "Review text cannot be empty.";
         } else {
-            $check = mysqli_query($conn, "SELECT ReviewID FROM Reviews WHERE UserID = '$user_id' AND MovieID = '$movie_id'");
-            if (mysqli_num_rows($check) > 0) {
+            // Check duplicate
+            $stmt = $conn->prepare("SELECT ReviewID FROM Reviews WHERE UserID = ? AND MovieID = ?");
+            $stmt->bind_param("ss", $user_id, $movie_id);
+            $stmt->execute();
+            $stmt->store_result();
+            if ($stmt->num_rows > 0) {
                 $review_error = "You have already reviewed this movie.";
-            } else {
-                $max_q   = mysqli_query($conn, "SELECT MAX(CAST(SUBSTRING(ReviewID, 5) AS UNSIGNED)) AS max_id FROM Reviews WHERE ReviewID LIKE 'rev_%'");
-                $max_row = mysqli_fetch_assoc($max_q);
-                $next_id = (int)($max_row['max_id'] ?? 0) + 1;
-                $rev_id  = 'rev_' . str_pad($next_id, 3, '0', STR_PAD_LEFT);
+            }
+            $stmt->close();
 
-                mysqli_query($conn, "INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text)
-                                     VALUES ('$rev_id', '$movie_id', '$user_id', $score, '$text')");
+            if (!$review_error) {
+                // Generate review ID
+                $max_stmt = $conn->prepare("SELECT MAX(CAST(SUBSTRING(ReviewID, 5) AS UNSIGNED)) AS max_id FROM Reviews WHERE ReviewID LIKE 'rev_%'");
+                $max_stmt->execute();
+                $max_result = $max_stmt->get_result();
+                $max_row    = $max_result->fetch_assoc();
+                $next_id    = (int)($max_row['max_id'] ?? 0) + 1;
+                $rev_id     = 'rev_' . str_pad($next_id, 3, '0', STR_PAD_LEFT);
+                $max_stmt->close();
+
+                $stmt = $conn->prepare("INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text) VALUES (?, ?, ?, ?, ?)");
+                $stmt->bind_param("sssis", $rev_id, $movie_id, $user_id, $score, $text);
+                $stmt->execute();
+                $stmt->close();
 
                 header("Location: movie.php?id=" . urlencode($movie_id) . "&reviewed=1");
                 exit();
@@ -51,38 +65,57 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
     }
 }
 
-$sql    = "SELECT * FROM Movies WHERE MovieID = '$movie_id'";
-$result = mysqli_query($conn, $sql);
-
-if (mysqli_num_rows($result) == 0) {
+// Fetch movie
+$stmt = $conn->prepare("SELECT * FROM Movies WHERE MovieID = ?");
+$stmt->bind_param("s", $movie_id);
+$stmt->execute();
+$result = $stmt->get_result();
+if ($result->num_rows == 0) {
     echo "<p style='color:#fff;padding:40px;'>Movie not found.</p>"; exit();
 }
-$movie = mysqli_fetch_assoc($result);
+$movie = $result->fetch_assoc();
+$stmt->close();
 
-
+// Check if current user already reviewed
 $user_already_reviewed = false;
 if (!$is_guest) {
-    $uid_esc = mysqli_real_escape_string($conn, $_SESSION['user_id']);
-    $ck      = mysqli_query($conn, "SELECT ReviewID FROM Reviews WHERE UserID = '$uid_esc' AND MovieID = '$movie_id'");
-    $user_already_reviewed = (mysqli_num_rows($ck) > 0);
+    $uid = $_SESSION['user_id'];
+    $stmt = $conn->prepare("SELECT ReviewID FROM Reviews WHERE UserID = ? AND MovieID = ?");
+    $stmt->bind_param("ss", $uid, $movie_id);
+    $stmt->execute();
+    $stmt->store_result();
+    $user_already_reviewed = ($stmt->num_rows > 0);
+    $stmt->close();
 }
 
-$review_sql    = "SELECT Reviews.*, Users.UserID, Users.UserType
-                  FROM Reviews
-                  JOIN Users ON Reviews.UserID = Users.UserID
-                  WHERE Reviews.MovieID = '$movie_id'
-                  ORDER BY Reviews.Score DESC";
-$review_result = mysqli_query($conn, $review_sql);
-$review_count  = mysqli_num_rows($review_result);
+// Fetch reviews
+$stmt = $conn->prepare("SELECT Reviews.*, Users.UserID, Users.UserType
+                         FROM Reviews
+                         JOIN Users ON Reviews.UserID = Users.UserID
+                         WHERE Reviews.MovieID = ?
+                         ORDER BY Reviews.Score DESC");
+$stmt->bind_param("s", $movie_id);
+$stmt->execute();
+$review_result = $stmt->get_result();
+$review_count  = $review_result->num_rows;
+$stmt->close();
 
-$avg_q   = mysqli_query($conn, "SELECT AVG(Score) AS avg_score FROM Reviews WHERE MovieID = '$movie_id'");
-$avg_row = mysqli_fetch_assoc($avg_q);
+// Avg score
+$stmt = $conn->prepare("SELECT AVG(Score) AS avg_score FROM Reviews WHERE MovieID = ?");
+$stmt->bind_param("s", $movie_id);
+$stmt->execute();
+$avg_row   = $stmt->get_result()->fetch_assoc();
 $avg_score = $avg_row['avg_score'] ? number_format($avg_row['avg_score'], 1) : null;
+$stmt->close();
 
-// get cast from the Actors table (actors are stored separately, not in the Movies row)
-$actors_q   = mysqli_query($conn, "SELECT Actor_Name FROM Actors WHERE MovieID = '$movie_id' ORDER BY ActorID");
+// Fetch actors
+$stmt = $conn->prepare("SELECT Actor_Name FROM Actors WHERE MovieID = ? ORDER BY ActorID");
+$stmt->bind_param("s", $movie_id);
+$stmt->execute();
+$actors_result = $stmt->get_result();
 $actor_list = [];
-while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
+while ($a = $actors_result->fetch_assoc()) $actor_list[] = $a['Actor_Name'];
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -93,8 +126,6 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background-color: #0a0a0a; color: #ffffff; }
-
-        /* NAV */
         .navbar { background-color: #0a0a0a; border-bottom: 2px solid #ffffff; padding: 14px 30px; display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 20px; font-weight: bold; color: #5b80a8; text-decoration: none; letter-spacing: 2px; }
         .nav-right { display: flex; align-items: center; }
@@ -108,78 +139,17 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
         .logout-link:hover { color: #ff5050; }
         .create-acct-link { color: #5b80a8; text-decoration: none; font-size: 12px; border: 1px solid #5b80a8; padding: 4px 10px; border-radius: 6px; transition: all 0.2s; }
         .create-acct-link:hover { background: #5b80a8; color: #fff; }
-
-        /* CONTENT */
         .page-content { max-width: 900px; margin: 0 auto; padding: 32px 30px 60px; }
-
         .back-link { display: inline-flex; align-items: center; gap: 6px; color: #5b80a8; text-decoration: none; font-size: 13px; margin-bottom: 24px; transition: color 0.2s; }
         .back-link:hover { color: #fff; }
-
-        /* ── MOVIE HEADER with poster ── */
-        .movie-header {
-            border: 2px solid #ffffff;
-            border-radius: 14px;
-            padding: 28px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 24px;
-            align-items: flex-start;
-        }
-
-        /* POSTER column */
-        .poster-column {
-            flex-shrink: 0;
-            width: 160px;
-        }
-        .poster-wrap {
-            width: 160px;
-            height: 240px;          /* 2:3 ratio */
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-            background: #111;
-            border: 1px solid #2a2a2a;
-        }
-        /* real poster image */
-        .poster-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center top;
-            display: block;
-        }
-        /* styled fallback block */
-        .poster-fallback {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            background: linear-gradient(145deg, #1a2535 0%, #0d1520 100%);
-            text-align: center;
-            gap: 12px;
-        }
-        .poster-fallback-genre {
-            font-size: 9px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: #5b80a8;
-            font-weight: 700;
-        }
-        .poster-fallback-title {
-            font-size: 13px;
-            font-weight: 800;
-            color: #ddd;
-            line-height: 1.35;
-        }
-        .poster-fallback-year {
-            font-size: 11px;
-            color: #555;
-        }
-
-        /* DETAILS column (right of poster) */
+        .movie-header { border: 2px solid #ffffff; border-radius: 14px; padding: 28px; margin-bottom: 20px; display: flex; gap: 24px; align-items: flex-start; }
+        .poster-column { flex-shrink: 0; width: 160px; }
+        .poster-wrap { width: 160px; height: 240px; border-radius: 10px; overflow: hidden; position: relative; background: #111; border: 1px solid #2a2a2a; }
+        .poster-img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+        .poster-fallback { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; background: linear-gradient(145deg, #1a2535 0%, #0d1520 100%); text-align: center; gap: 12px; }
+        .poster-fallback-genre { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #5b80a8; font-weight: 700; }
+        .poster-fallback-title { font-size: 13px; font-weight: 800; color: #ddd; line-height: 1.35; }
+        .poster-fallback-year { font-size: 11px; color: #555; }
         .header-details { flex: 1; min-width: 0; }
         .movie-header h1 { font-size: 26px; font-weight: 800; margin-bottom: 12px; line-height: 1.2; }
         .movie-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
@@ -191,14 +161,7 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
         .score-wrap { display: flex; align-items: center; gap: 10px; }
         .big-score { background: #5b80a8; color: #fff; padding: 6px 20px; border-radius: 24px; font-size: 20px; font-weight: 800; white-space: nowrap; }
         .user-score { background: #1a1a1a; border: 1px solid #2a2a2a; color: #aaa; padding: 6px 14px; border-radius: 24px; font-size: 14px; white-space: nowrap; }
-
-        /* narrow screens: stack poster above details */
-        @media (max-width: 560px) {
-            .movie-header { flex-direction: column; align-items: center; }
-            .poster-column { width: 100%; display: flex; justify-content: center; }
-        }
-
-        /* MOVIE INFO */
+        @media (max-width: 560px) { .movie-header { flex-direction: column; align-items: center; } .poster-column { width: 100%; display: flex; justify-content: center; } }
         .movie-info { border: 1px solid #1c1c1c; border-radius: 14px; padding: 24px; margin-bottom: 20px; background: #0f0f0f; }
         .info-section { margin-bottom: 18px; }
         .info-section:last-child { margin-bottom: 0; }
@@ -206,8 +169,6 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
         .info-text { font-size: 14px; color: #bbb; line-height: 1.7; }
         .actor-list { display: flex; flex-wrap: wrap; gap: 8px; }
         .actor-tag { font-size: 12px; background: #111; border: 1px solid #2a2a2a; color: #aaa; padding: 3px 12px; border-radius: 6px; }
-
-        /* REVIEW FORM */
         .review-form-box { border: 1px solid #2a2a2a; border-radius: 14px; padding: 24px; margin-bottom: 20px; background: #0f0f0f; }
         .review-form-title { font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; border-bottom: 2px solid #5b80a8; padding-bottom: 5px; margin-bottom: 18px; }
         .score-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -227,8 +188,6 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
         .guest-prompt { font-size: 13px; color: #555; }
         .guest-prompt a { color: #5b80a8; text-decoration: none; }
         .guest-prompt a:hover { text-decoration: underline; }
-
-        /* REVIEWS LIST */
         .reviews-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
         .reviews-title { font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; border-bottom: 2px solid #5b80a8; padding-bottom: 5px; }
         .reviews-count { font-size: 12px; color: #555; }
@@ -241,7 +200,6 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
         .review-score { background: #5b80a8; color: #fff; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .review-text { font-size: 14px; line-height: 1.7; color: #888; }
         .no-reviews { text-align: center; color: #444; font-size: 14px; padding: 40px; border: 1px dashed #1c1c1c; border-radius: 12px; }
-
         .footer { text-align: center; padding: 20px; color: #333; font-size: 12px; border-top: 1px solid #1a1a1a; }
     </style>
 </head>
@@ -272,17 +230,12 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
 <div class="page-content">
     <a href="movies.php" class="back-link">&larr; Back to movies</a>
 
-    <!-- MOVIE HEADER – poster + details side by side -->
     <div class="movie-header">
-
-        <!-- POSTER -->
         <div class="poster-column">
             <div class="poster-wrap">
                 <?php echo renderPosterImg($movie, 'page'); ?>
             </div>
         </div>
-
-        <!-- DETAILS -->
         <div class="header-details">
             <h1><?php echo htmlspecialchars($movie['Title']); ?></h1>
             <div class="movie-meta">
@@ -306,10 +259,8 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
                 </div>
             </div>
         </div>
+    </div>
 
-    </div><!-- /.movie-header -->
-
-    <!-- MOVIE INFO -->
     <div class="movie-info">
         <?php if (!empty($movie['Description'])): ?>
         <div class="info-section">
@@ -329,22 +280,15 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
         <?php endif; ?>
     </div>
 
-    <!-- REVIEW FORM -->
     <div class="review-form-box">
         <div class="review-form-title">Write a Review</div>
-
         <?php if ($review_success): ?>
             <div class="form-success">&#10003; Your review has been submitted!</div>
         <?php endif; ?>
-
         <?php if ($is_guest): ?>
-            <p class="guest-prompt">
-                <a href="register.php">Create an account</a> or <a href="index.php">sign in</a> to write a review.
-            </p>
-
+            <p class="guest-prompt"><a href="register.php">Create an account</a> or <a href="index.php">sign in</a> to write a review.</p>
         <?php elseif ($user_already_reviewed): ?>
             <p class="already-reviewed">You've already reviewed this movie. <span>Thanks for your feedback!</span></p>
-
         <?php else: ?>
             <?php if ($review_error): ?>
                 <div class="form-error"><?php echo htmlspecialchars($review_error); ?></div>
@@ -358,21 +302,19 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
                         <?php endfor; ?>
                     </select>
                 </div>
-                <textarea name="review_text" class="review-textarea"
-                          placeholder="Share your thoughts about this film..."><?php echo isset($_POST['review_text']) ? htmlspecialchars($_POST['review_text']) : ''; ?></textarea>
+                <textarea name="review_text" class="review-textarea" placeholder="Share your thoughts about this film..."><?php echo isset($_POST['review_text']) ? htmlspecialchars($_POST['review_text']) : ''; ?></textarea>
                 <button type="submit" name="submit_review" class="submit-btn">Submit Review</button>
             </form>
         <?php endif; ?>
     </div>
 
-    <!-- REVIEWS LIST -->
     <div class="reviews-header">
         <div class="reviews-title">Reviews</div>
         <div class="reviews-count"><?php echo $review_count; ?> total</div>
     </div>
 
     <?php if ($review_count > 0): ?>
-        <?php while ($review = mysqli_fetch_assoc($review_result)): ?>
+        <?php while ($review = $review_result->fetch_assoc()): ?>
             <div class="review-card">
                 <div class="review-top">
                     <div class="review-user">
@@ -391,7 +333,6 @@ while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
 
 <div class="footer">MTM Studios &copy; 2026 | CMS 375 Database Project</div>
 <script>
-// call OMDB directly from the browser for the detail page poster
 document.addEventListener('DOMContentLoaded', function () {
     var el = document.querySelector('.poster-fallback[data-fetch]');
     if (!el) return;
@@ -409,7 +350,6 @@ document.addEventListener('DOMContentLoaded', function () {
             img.src = data.Poster;
             wrap.insertBefore(img, el);
             el.style.display = 'none';
-            // cache in db (fire and forget)
             fetch('cache_poster.php?id=' + encodeURIComponent(id) + '&url=' + encodeURIComponent(data.Poster));
         })
         .catch(function () {});

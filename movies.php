@@ -10,19 +10,43 @@ if (!isset($_SESSION['logged_in'])) {
 
 $is_guest = ($_SESSION['user_id'] === 'Guest');
 
-// --- Collect filter inputs ---
-$search           = isset($_GET['search'])    ? mysqli_real_escape_string($conn, trim($_GET['search']))    : '';
-$genre_filter     = isset($_GET['genre'])     ? mysqli_real_escape_string($conn, $_GET['genre'])           : '';
-$year_filter      = isset($_GET['year'])      ? intval($_GET['year'])                                      : 0;
-$streaming_filter = isset($_GET['streaming']) ? mysqli_real_escape_string($conn, $_GET['streaming'])       : '';
+// Collect filter inputs - sort is whitelisted, year is cast to int, text inputs use prepared statements
+$search           = isset($_GET['search'])    ? trim($_GET['search'])    : '';
+$genre_filter     = isset($_GET['genre'])     ? trim($_GET['genre'])     : '';
+$year_filter      = isset($_GET['year'])      ? intval($_GET['year'])    : 0;
+$streaming_filter = isset($_GET['streaming']) ? trim($_GET['streaming']) : '';
 $sort             = (isset($_GET['sort']) && in_array($_GET['sort'], ['rating','year_desc','year_asc','title']))
                     ? $_GET['sort'] : 'rating';
 
-$sql = "SELECT * FROM Movies WHERE 1=1";
-if ($search != "")           $sql .= " AND (Title LIKE '%$search%' OR Description LIKE '%$search%' OR MovieID IN (SELECT MovieID FROM Actors WHERE Actor_Name LIKE '%$search%'))";
-if ($genre_filter != "")     $sql .= " AND Genre = '$genre_filter'";
-if ($year_filter > 0)        $sql .= " AND ReleaseYear = $year_filter";
-if ($streaming_filter != "") $sql .= " AND StreamingService LIKE '%$streaming_filter%'";
+// Build dynamic prepared statement
+$sql    = "SELECT * FROM Movies WHERE 1=1";
+$params = [];
+$types  = '';
+
+if ($search !== '') {
+    $like = "%$search%";
+    $sql .= " AND (Title LIKE ? OR Description LIKE ? OR MovieID IN (SELECT MovieID FROM Actors WHERE Actor_Name LIKE ?))";
+    $params[] = $like;
+    $params[] = $like;
+    $params[] = $like;
+    $types .= 'sss';
+}
+if ($genre_filter !== '') {
+    $sql .= " AND Genre = ?";
+    $params[] = $genre_filter;
+    $types .= 's';
+}
+if ($year_filter > 0) {
+    $sql .= " AND ReleaseYear = ?";
+    $params[] = $year_filter;
+    $types .= 'i';
+}
+if ($streaming_filter !== '') {
+    $like_stream = "%$streaming_filter%";
+    $sql .= " AND StreamingService LIKE ?";
+    $params[] = $like_stream;
+    $types .= 's';
+}
 
 switch ($sort) {
     case 'year_desc': $sql .= " ORDER BY ReleaseYear DESC";  break;
@@ -31,26 +55,30 @@ switch ($sort) {
     default:          $sql .= " ORDER BY Rating DESC";
 }
 
-$result     = mysqli_query($conn, $sql);
+$stmt = $conn->prepare($sql);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+$stmt->execute();
+$result     = $stmt->get_result();
 $all_movies = [];
-while ($m = mysqli_fetch_assoc($result)) $all_movies[] = $m;
+while ($m = $result->fetch_assoc()) $all_movies[] = $m;
+$stmt->close();
 
-
-// --- Options for filter dropdowns ---
+// Dropdown options (no user input, safe direct query)
 $genre_rows  = mysqli_query($conn, "SELECT DISTINCT Genre FROM Movies ORDER BY Genre");
 $all_genres  = [];
 while ($g = mysqli_fetch_assoc($genre_rows)) $all_genres[] = $g['Genre'];
 
-$year_rows  = mysqli_query($conn, "SELECT DISTINCT ReleaseYear FROM Movies WHERE ReleaseYear IS NOT NULL ORDER BY ReleaseYear DESC");
-$all_years  = [];
+$year_rows = mysqli_query($conn, "SELECT DISTINCT ReleaseYear FROM Movies WHERE ReleaseYear IS NOT NULL ORDER BY ReleaseYear DESC");
+$all_years = [];
 while ($y = mysqli_fetch_assoc($year_rows)) $all_years[] = $y['ReleaseYear'];
 
 $stream_rows   = mysqli_query($conn, "SELECT DISTINCT StreamingService FROM Movies ORDER BY StreamingService");
 $all_streaming = [];
 while ($s = mysqli_fetch_assoc($stream_rows)) $all_streaming[] = $s['StreamingService'];
 
-// --- Group by genre for default (unfiltered) view ---
-$is_filtered    = ($search != '' || $genre_filter != '' || $year_filter > 0 || $streaming_filter != '');
+$is_filtered     = ($search !== '' || $genre_filter !== '' || $year_filter > 0 || $streaming_filter !== '');
 $movies_by_genre = [];
 if (!$is_filtered) {
     foreach ($all_movies as $movie) {
@@ -68,8 +96,6 @@ if (!$is_filtered) {
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background-color: #0a0a0a; color: #ffffff; }
-
-        /* NAV */
         .navbar { background-color: #0a0a0a; border-bottom: 2px solid #ffffff; padding: 14px 30px; display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 20px; font-weight: bold; color: #5b80a8; text-decoration: none; letter-spacing: 2px; }
         .nav-right { display: flex; align-items: center; }
@@ -83,8 +109,6 @@ if (!$is_filtered) {
         .logout-link:hover { color: #ff5050; }
         .create-acct-link { color: #5b80a8; text-decoration: none; font-size: 12px; border: 1px solid #5b80a8; padding: 4px 10px; border-radius: 6px; transition: all 0.2s; }
         .create-acct-link:hover { background: #5b80a8; color: #fff; }
-
-        /* FILTER BAR */
         .filter-bar { padding: 20px 30px; border-bottom: 1px solid #1a1a1a; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
         .filter-bar form { display: contents; }
         .search-input-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; max-width: 340px; }
@@ -98,107 +122,30 @@ if (!$is_filtered) {
         .filter-select option { background: #111; }
         .clear-btn { padding: 8px 14px; background: transparent; color: #ff5050; border: 1px solid #ff5050; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
         .clear-btn:hover { background: rgba(255,80,80,0.1); }
-
-        /* RESULTS INFO */
         .results-bar { padding: 12px 30px; font-size: 12px; color: #555; border-bottom: 1px solid #111; }
         .results-bar span { color: #fff; font-weight: 600; }
-
-        /* GENRE SECTIONS */
         .genre-section { padding: 24px 30px 12px; }
         .genre-label { font-size: 15px; font-weight: bold; border-bottom: 2px solid #5b80a8; display: inline-block; padding-bottom: 5px; margin-bottom: 16px; }
         .movie-row { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 14px; }
         .movie-row::-webkit-scrollbar { height: 4px; }
         .movie-row::-webkit-scrollbar-track { background: #111; }
         .movie-row::-webkit-scrollbar-thumb { background: #5b80a8; border-radius: 4px; }
-
-        /* ── POSTER CARD ── */
-        .movie-card {
-            position: relative;
-            min-width: 150px;
-            max-width: 150px;
-            height: 225px;          /* standard 2:3 poster ratio */
-            border-radius: 10px;
-            overflow: hidden;
-            text-decoration: none;
-            color: #fff;
-            flex-shrink: 0;
-            border: 2px solid transparent;
-            background: #111;
-            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-            display: block;
-        }
-        .movie-card:hover {
-            border-color: #5b80a8;
-            transform: translateY(-6px);
-            box-shadow: 0 14px 36px rgba(91,128,168,0.4);
-        }
-
-        /* poster image fills card */
-        .card-poster-img {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center top;
-            display: block;
-        }
-
-        /* text fallback – shown when PosterURL is missing/invalid */
-        .card-poster-fallback {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 14px;
-            background: linear-gradient(145deg, #1a2535 0%, #0d1520 100%);
-            text-align: center;
-            gap: 10px;
-        }
-        .card-fallback-genre {
-            font-size: 9px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: #5b80a8;
-            font-weight: 700;
-        }
-        .card-fallback-title {
-            font-size: 12px;
-            font-weight: 700;
-            color: #ddd;
-            line-height: 1.35;
-        }
-
-        /* gradient overlay at bottom – always visible over the poster */
-        .card-overlay {
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            padding: 30px 10px 10px;
-            background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 55%, transparent 100%);
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
+        .movie-card { position: relative; min-width: 150px; max-width: 150px; height: 225px; border-radius: 10px; overflow: hidden; text-decoration: none; color: #fff; flex-shrink: 0; border: 2px solid transparent; background: #111; transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s; display: block; }
+        .movie-card:hover { border-color: #5b80a8; transform: translateY(-6px); box-shadow: 0 14px 36px rgba(91,128,168,0.4); }
+        .card-poster-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+        .card-poster-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; background: linear-gradient(145deg, #1a2535 0%, #0d1520 100%); text-align: center; gap: 10px; }
+        .card-fallback-genre { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #5b80a8; font-weight: 700; }
+        .card-fallback-title { font-size: 12px; font-weight: 700; color: #ddd; line-height: 1.35; }
+        .card-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 30px 10px 10px; background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 55%, transparent 100%); display: flex; flex-direction: column; gap: 4px; }
         .card-title { font-size: 11px; font-weight: 700; line-height: 1.3; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
         .card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
         .card-year { font-size: 10px; color: #aaa; }
         .card-score { background: #5b80a8; color: #fff; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
-
-        /* GRID (filtered results) */
-        .movie-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 16px;
-            padding: 24px 30px;
-        }
+        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; padding: 24px 30px; }
         .movie-grid .movie-card { min-width: unset; max-width: unset; width: 100%; }
-
         .empty-state { text-align: center; color: #444; font-size: 14px; padding: 60px 30px; }
         .empty-state p { margin-bottom: 8px; }
         .empty-state .sub { font-size: 12px; color: #333; }
-
         .footer { text-align: center; padding: 20px; color: #333; font-size: 12px; border-top: 1px solid #1a1a1a; margin-top: 20px; }
     </style>
 </head>
@@ -226,53 +173,36 @@ if (!$is_filtered) {
     </div>
 </nav>
 
-<!-- FILTER BAR -->
 <form method="GET" action="movies.php">
     <div class="filter-bar">
         <div class="search-input-wrap">
-            <input type="text" name="search"
-                   placeholder="Search title, actor, description..."
-                   value="<?php echo htmlspecialchars($search); ?>">
+            <input type="text" name="search" placeholder="Search title, actor, description..." value="<?php echo htmlspecialchars($search); ?>">
             <button type="submit" class="btn-search">&#128269;</button>
         </div>
-
         <select name="genre" class="filter-select" onchange="this.form.submit()">
             <option value="">All Genres</option>
             <?php foreach ($all_genres as $g): ?>
-                <option value="<?php echo htmlspecialchars($g); ?>"
-                    <?php echo ($genre_filter == $g) ? 'selected' : ''; ?>>
-                    <?php echo htmlspecialchars($g); ?>
-                </option>
+                <option value="<?php echo htmlspecialchars($g); ?>" <?php echo ($genre_filter == $g) ? 'selected' : ''; ?>><?php echo htmlspecialchars($g); ?></option>
             <?php endforeach; ?>
         </select>
-
         <select name="year" class="filter-select" onchange="this.form.submit()">
             <option value="">All Years</option>
             <?php foreach ($all_years as $y): ?>
-                <option value="<?php echo $y; ?>"
-                    <?php echo ($year_filter == $y) ? 'selected' : ''; ?>>
-                    <?php echo $y; ?>
-                </option>
+                <option value="<?php echo $y; ?>" <?php echo ($year_filter == $y) ? 'selected' : ''; ?>><?php echo $y; ?></option>
             <?php endforeach; ?>
         </select>
-
         <select name="streaming" class="filter-select" onchange="this.form.submit()">
             <option value="">All Services</option>
             <?php foreach ($all_streaming as $s): ?>
-                <option value="<?php echo htmlspecialchars($s); ?>"
-                    <?php echo ($streaming_filter == $s) ? 'selected' : ''; ?>>
-                    <?php echo htmlspecialchars($s); ?>
-                </option>
+                <option value="<?php echo htmlspecialchars($s); ?>" <?php echo ($streaming_filter == $s) ? 'selected' : ''; ?>><?php echo htmlspecialchars($s); ?></option>
             <?php endforeach; ?>
         </select>
-
         <select name="sort" class="filter-select" onchange="this.form.submit()">
             <option value="rating"    <?php echo ($sort == 'rating')    ? 'selected' : ''; ?>>Top Rated</option>
             <option value="year_desc" <?php echo ($sort == 'year_desc') ? 'selected' : ''; ?>>Newest First</option>
             <option value="year_asc"  <?php echo ($sort == 'year_asc')  ? 'selected' : ''; ?>>Oldest First</option>
             <option value="title"     <?php echo ($sort == 'title')     ? 'selected' : ''; ?>>A – Z</option>
         </select>
-
         <?php if ($is_filtered): ?>
             <a href="movies.php?sort=<?php echo urlencode($sort); ?>" class="clear-btn">&#10005; Clear Filters</a>
         <?php endif; ?>
@@ -293,9 +223,7 @@ if (!$is_filtered) {
         <p>No movies match your search.</p>
         <p class="sub">Try adjusting your filters or <a href="movies.php" style="color:#5b80a8;">clearing them</a>.</p>
     </div>
-
 <?php elseif ($is_filtered): ?>
-
     <div class="movie-grid">
         <?php foreach ($all_movies as $movie): ?>
             <a href="movie.php?id=<?php echo urlencode($movie['MovieID']); ?>" class="movie-card">
@@ -310,9 +238,7 @@ if (!$is_filtered) {
             </a>
         <?php endforeach; ?>
     </div>
-
 <?php else: ?>
-    <!-- DEFAULT: grouped by genre, horizontal poster scroll -->
     <?php foreach ($movies_by_genre as $genre => $movies): ?>
         <div class="genre-section">
             <div class="genre-label"><?php echo htmlspecialchars($genre); ?></div>
@@ -339,17 +265,11 @@ if (!$is_filtered) {
 document.addEventListener('DOMContentLoaded', function () {
     var API_KEY = '<?php echo OMDB_API_KEY; ?>';
     var tiles = document.querySelectorAll('.card-poster-fallback[data-fetch]');
-
-    console.log('[Posters] API key:', API_KEY);
-    console.log('[Posters] Tiles needing posters:', tiles.length);
-
     tiles.forEach(function (el) {
         var id = el.getAttribute('data-fetch');
-        console.log('[Posters] Fetching:', id);
         fetch('https://www.omdbapi.com/?i=' + encodeURIComponent(id) + '&apikey=' + API_KEY)
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                console.log('[Posters] Response for', id, ':', data.Poster || data.Error);
                 if (!data.Poster || data.Poster === 'N/A') return;
                 var img = document.createElement('img');
                 img.className = 'card-poster-img';
@@ -359,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 el.style.display = 'none';
                 fetch('cache_poster.php?id=' + encodeURIComponent(id) + '&url=' + encodeURIComponent(data.Poster));
             })
-            .catch(function (err) { console.log('[Posters] Fetch error for', id, ':', err); });
+            .catch(function () {});
     });
 });
 </script>
