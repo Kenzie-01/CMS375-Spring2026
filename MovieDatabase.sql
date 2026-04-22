@@ -17,7 +17,7 @@ CREATE TABLE Movies (
     ReleaseYear       INT,
     Title             VARCHAR(255),
     PosterURL         VARCHAR(255),
-    PrimaryStreamingService VARCHAR(255),
+    StreamingService VARCHAR(255),
     Genre             VARCHAR(100),
     Rating            DECIMAL(3,1),
     Description       VARCHAR(255)
@@ -113,7 +113,7 @@ INSERT INTO Users (UserID, FirstName, LastName, Email, UserType, FavoriteGenre, 
 ('user_069', NULL, NULL, NULL, 'Admin',   'Sci-Fi',    'eY9!rQ1$iT');
 
 
-INSERT INTO Movies (MovieID, ReleaseYear, Title, PosterURL, PrimaryStreamingService, Genre, Rating, Description) VALUES
+INSERT INTO Movies (MovieID, ReleaseYear, Title, PosterURL, StreamingService, Genre, Rating, Description) VALUES
 ('tt0012349', 1921, 'The Kid',                                        'Poster URL', 'The Criterion Channel', 'Comedy',    8.3, 'A pompous millionaire finds his carefree existence turned upside down when a resourceful young orphan enters his life and refuses to leave.'),
 ('tt0027977', 1936, 'Modern Times',                                   'Poster URL', 'The Criterion Channel', 'Romance',   8.5, 'A factory worker struggles to survive the pressures of industrial life while falling for a homeless young woman, together searching for a better future.'),
 ('tt0034583', 1942, 'Casablanca',                                     'Poster URL', 'Amazon Prime Video',    'Drama',     8.5, 'In wartime Morocco, a cynical American nightclub owner must choose between love and virtue when his former lover arrives with her fugitive husband seeking transit papers.'),
