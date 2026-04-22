@@ -57,8 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $fg_esc   = mysqli_real_escape_string($conn, $fav_genre);
                 $pw_esc   = mysqli_real_escape_string($conn, $hashed);
 
-                $insert_sql = "INSERT INTO Users (UserID, FirstName, LastName, Email, UserType, FavoriteGenre, ReviewCount, Password)
-                               VALUES ('$un_esc', '$fn_esc', '$ln_esc', '$em_esc', 'Regular', '$fg_esc', 0, '$pw_esc')";
+                $insert_sql = "INSERT INTO Users (UserID, FirstName, LastName, Email, UserType, FavoriteGenre, Password)
+                               VALUES ('$un_esc', '$fn_esc', '$ln_esc', '$em_esc', 'Regular', '$fg_esc', '$pw_esc')";
 
                 if (mysqli_query($conn, $insert_sql)) {
                     // Auto-login

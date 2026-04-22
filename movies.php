@@ -19,10 +19,10 @@ $sort             = (isset($_GET['sort']) && in_array($_GET['sort'], ['rating','
                     ? $_GET['sort'] : 'rating';
 
 $sql = "SELECT * FROM Movies WHERE 1=1";
-if ($search != "")           $sql .= " AND (Title LIKE '%$search%' OR Actors LIKE '%$search%' OR Description LIKE '%$search%')";
+if ($search != "")           $sql .= " AND (Title LIKE '%$search%' OR Description LIKE '%$search%' OR MovieID IN (SELECT MovieID FROM Actors WHERE Actor_Name LIKE '%$search%'))";
 if ($genre_filter != "")     $sql .= " AND Genre = '$genre_filter'";
 if ($year_filter > 0)        $sql .= " AND ReleaseYear = $year_filter";
-if ($streaming_filter != "") $sql .= " AND StreamingServices LIKE '%$streaming_filter%'";
+if ($streaming_filter != "") $sql .= " AND StreamingService LIKE '%$streaming_filter%'";
 
 switch ($sort) {
     case 'year_desc': $sql .= " ORDER BY ReleaseYear DESC";  break;
@@ -35,6 +35,7 @@ $result     = mysqli_query($conn, $sql);
 $all_movies = [];
 while ($m = mysqli_fetch_assoc($result)) $all_movies[] = $m;
 
+
 // --- Options for filter dropdowns ---
 $genre_rows  = mysqli_query($conn, "SELECT DISTINCT Genre FROM Movies ORDER BY Genre");
 $all_genres  = [];
@@ -44,9 +45,9 @@ $year_rows  = mysqli_query($conn, "SELECT DISTINCT ReleaseYear FROM Movies WHERE
 $all_years  = [];
 while ($y = mysqli_fetch_assoc($year_rows)) $all_years[] = $y['ReleaseYear'];
 
-$stream_rows   = mysqli_query($conn, "SELECT DISTINCT StreamingServices FROM Movies ORDER BY StreamingServices");
+$stream_rows   = mysqli_query($conn, "SELECT DISTINCT StreamingService FROM Movies ORDER BY StreamingService");
 $all_streaming = [];
-while ($s = mysqli_fetch_assoc($stream_rows)) $all_streaming[] = $s['StreamingServices'];
+while ($s = mysqli_fetch_assoc($stream_rows)) $all_streaming[] = $s['StreamingService'];
 
 // --- Group by genre for default (unfiltered) view ---
 $is_filtered    = ($search != '' || $genre_filter != '' || $year_filter > 0 || $streaming_filter != '');
@@ -334,6 +335,34 @@ if (!$is_filtered) {
 <?php endif; ?>
 
 <div class="footer">MTM Studios &copy; 2026 | CMS 375 Database Project</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var API_KEY = '<?php echo OMDB_API_KEY; ?>';
+    var tiles = document.querySelectorAll('.card-poster-fallback[data-fetch]');
+
+    console.log('[Posters] API key:', API_KEY);
+    console.log('[Posters] Tiles needing posters:', tiles.length);
+
+    tiles.forEach(function (el) {
+        var id = el.getAttribute('data-fetch');
+        console.log('[Posters] Fetching:', id);
+        fetch('https://www.omdbapi.com/?i=' + encodeURIComponent(id) + '&apikey=' + API_KEY)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                console.log('[Posters] Response for', id, ':', data.Poster || data.Error);
+                if (!data.Poster || data.Poster === 'N/A') return;
+                var img = document.createElement('img');
+                img.className = 'card-poster-img';
+                img.alt = '';
+                img.src = data.Poster;
+                el.parentNode.insertBefore(img, el);
+                el.style.display = 'none';
+                fetch('cache_poster.php?id=' + encodeURIComponent(id) + '&url=' + encodeURIComponent(data.Poster));
+            })
+            .catch(function (err) { console.log('[Posters] Fetch error for', id, ':', err); });
+    });
+});
+</script>
 </body>
 </html>
 <?php mysqli_close($conn); ?>

@@ -338,7 +338,7 @@ $is_guest = ($_SESSION['user_id'] === 'Guest');
                     </div>
                 </div>
                 <div class="top-right">
-                    <div class="top-service"><?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
+                    <div class="top-service"><?php echo htmlspecialchars($movie['StreamingService']); ?></div>
                     <span class="top-score"><?php echo $movie['Rating']; ?>/10</span>
                 </div>
             </a>

@@ -43,7 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
 
                 mysqli_query($conn, "INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text)
                                      VALUES ('$rev_id', '$movie_id', '$user_id', $score, '$text')");
-                mysqli_query($conn, "UPDATE Users SET ReviewCount = ReviewCount + 1 WHERE UserID = '$user_id'");
 
                 header("Location: movie.php?id=" . urlencode($movie_id) . "&reviewed=1");
                 exit();
@@ -59,6 +58,7 @@ if (mysqli_num_rows($result) == 0) {
     echo "<p style='color:#fff;padding:40px;'>Movie not found.</p>"; exit();
 }
 $movie = mysqli_fetch_assoc($result);
+
 
 $user_already_reviewed = false;
 if (!$is_guest) {
@@ -79,8 +79,10 @@ $avg_q   = mysqli_query($conn, "SELECT AVG(Score) AS avg_score FROM Reviews WHER
 $avg_row = mysqli_fetch_assoc($avg_q);
 $avg_score = $avg_row['avg_score'] ? number_format($avg_row['avg_score'], 1) : null;
 
-// Determine if a valid poster exists so we can adjust layout
-$has_poster = (getMoviePoster($movie) !== null);
+// get cast from the Actors table (actors are stored separately, not in the Movies row)
+$actors_q   = mysqli_query($conn, "SELECT Actor_Name FROM Actors WHERE MovieID = '$movie_id' ORDER BY ActorID");
+$actor_list = [];
+while ($a = mysqli_fetch_assoc($actors_q)) $actor_list[] = $a['Actor_Name'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -288,7 +290,7 @@ $has_poster = (getMoviePoster($movie) !== null);
                 <?php if ($movie['ReleaseYear']): ?>
                     <div class="meta-pill"><span>Year:</span> <?php echo $movie['ReleaseYear']; ?></div>
                 <?php endif; ?>
-                <div class="meta-pill"><span>Streaming:</span> <?php echo htmlspecialchars($movie['StreamingServices']); ?></div>
+                <div class="meta-pill"><span>Streaming:</span> <?php echo htmlspecialchars($movie['StreamingService']); ?></div>
             </div>
             <div class="header-bottom">
                 <div class="genre-tags">
@@ -315,12 +317,12 @@ $has_poster = (getMoviePoster($movie) !== null);
             <div class="info-text"><?php echo htmlspecialchars($movie['Description']); ?></div>
         </div>
         <?php endif; ?>
-        <?php if (!empty($movie['Actors'])): ?>
+        <?php if (!empty($actor_list)): ?>
         <div class="info-section">
             <div class="info-label">Cast</div>
             <div class="actor-list">
-                <?php foreach (explode(", ", $movie['Actors']) as $actor): ?>
-                    <span class="actor-tag"><?php echo htmlspecialchars(trim($actor)); ?></span>
+                <?php foreach ($actor_list as $actor): ?>
+                    <span class="actor-tag"><?php echo htmlspecialchars($actor); ?></span>
                 <?php endforeach; ?>
             </div>
         </div>
@@ -388,6 +390,31 @@ $has_poster = (getMoviePoster($movie) !== null);
 </div>
 
 <div class="footer">MTM Studios &copy; 2026 | CMS 375 Database Project</div>
+<script>
+// call OMDB directly from the browser for the detail page poster
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.querySelector('.poster-fallback[data-fetch]');
+    if (!el) return;
+    var id      = el.getAttribute('data-fetch');
+    var API_KEY = '<?php echo OMDB_API_KEY; ?>';
+    fetch('https://www.omdbapi.com/?i=' + encodeURIComponent(id) + '&apikey=' + API_KEY)
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (!data.Poster || data.Poster === 'N/A') return;
+            var wrap = el.closest('.poster-wrap');
+            if (!wrap) return;
+            var img = document.createElement('img');
+            img.className = 'poster-img';
+            img.alt = '';
+            img.src = data.Poster;
+            wrap.insertBefore(img, el);
+            el.style.display = 'none';
+            // cache in db (fire and forget)
+            fetch('cache_poster.php?id=' + encodeURIComponent(id) + '&url=' + encodeURIComponent(data.Poster));
+        })
+        .catch(function () {});
+});
+</script>
 </body>
 </html>
 <?php mysqli_close($conn); ?>

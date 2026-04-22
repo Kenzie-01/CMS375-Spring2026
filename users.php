@@ -14,21 +14,18 @@ if (isset($_GET['role']) && $_GET['role'] != "") {
     $role_filter = mysqli_real_escape_string($conn, $_GET['role']);
 }
 
-$sql = "SELECT * FROM Users";
-if ($role_filter != "") {
-    $sql .= " WHERE UserType = '$role_filter'";
-}
-
-$sql .= " ORDER BY ReviewCount DESC";
-
+// calculate review count dynamically from the Reviews table
+// the Users table doesnt have a ReviewCount column so we use a join
+$where = $role_filter != "" ? "WHERE u.UserType = '$role_filter'" : "";
 $query = "SELECT u.*, COALESCE(r.ReviewCount, 0) AS ReviewCount
           FROM Users u
-          LEFT JOIN (SELECT UserID, COUNT(ReviewID) AS ReviewCount 
-                     FROM Reviews GROUP BY UserID) r 
+          LEFT JOIN (SELECT UserID, COUNT(ReviewID) AS ReviewCount
+                     FROM Reviews GROUP BY UserID) r
           ON u.UserID = r.UserID
+          $where
           ORDER BY ReviewCount DESC";
 
-$result = mysqli_query($conn, $sql);
+$result = mysqli_query($conn, $query);
 $total  = mysqli_num_rows($result);
 ?>
 <!DOCTYPE html>

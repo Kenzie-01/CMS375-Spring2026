@@ -55,9 +55,6 @@ $rev_id  = 'rev_' . str_pad($next_id, 3, '0', STR_PAD_LEFT);
 // Insert review
 mysqli_query($conn, "INSERT INTO Reviews (ReviewID, MovieID, UserID, Score, Text) VALUES ('$rev_id', '$movie_id', '$user_id', $score, '$text')");
 
-// Update ReviewCount
-mysqli_query($conn, "UPDATE Users SET ReviewCount = ReviewCount + 1 WHERE UserID = '$user_id'");
-
 echo json_encode(['success' => true]);
 mysqli_close($conn);
 ?>
