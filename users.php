@@ -18,7 +18,13 @@ $sql = "SELECT * FROM Users";
 if ($role_filter != "") {
     $sql .= " WHERE UserType = '$role_filter'";
 }
-$sql .= " ORDER BY ReviewCount DESC";
+
+$query = "SELECT u.*, COALESCE(r.ReviewCount, 0) AS ReviewCount
+          FROM Users u
+          LEFT JOIN (SELECT UserID, COUNT(ReviewID) AS ReviewCount 
+                     FROM Reviews GROUP BY UserID) r 
+          ON u.UserID = r.UserID
+          ORDER BY ReviewCount DESC";
 
 $result = mysqli_query($conn, $sql);
 $total  = mysqli_num_rows($result);
