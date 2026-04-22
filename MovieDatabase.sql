@@ -297,9 +297,3 @@ INSERT INTO Actors (ActorID, MovieID, Actor_Name) VALUES
 ('ac_059', 'tt8267676', 'Nola Klop'),
 ('ac_060', 'tt8673952', 'Sebastian Eugene Hansen'),
 ('ac_061', 'tt9046728', 'Colby Jack');
-
-
-SELECT u.UserID, COUNT(r.ReviewID) AS ReviewCount
-FROM Users u
-LEFT JOIN Reviews r ON u.UserID = r.UserID
-GROUP BY u.UserID;
